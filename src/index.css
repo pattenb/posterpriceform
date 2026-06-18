@@ -1,0 +1,43 @@
+@font-face {
+  font-family: 'UGentPannoText';
+  src: url('https://www.ugent.be/static/fonts/ugentpannotext-normal.woff2') format('woff2'),
+       url('https://www.ugent.be/static/fonts/ugentpannotext-normal.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UGentPannoText';
+  src: url('https://www.ugent.be/static/fonts/ugentpannotext-semi.woff2') format('woff2'),
+       url('https://www.ugent.be/static/fonts/ugentpannotext-semi.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UGentPannoText';
+  src: url('https://www.ugent.be/static/fonts/ugentpannotext-bold.woff2') format('woff2'),
+       url('https://www.ugent.be/static/fonts/ugentpannotext-bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-ugent-blue: #1E64C8;
+  --color-ugent-blue-dark: #15458c;
+  --color-ugent-blue-light: #4c8be6;
+  --color-ugent-yellow: #FFD200;
+  --color-ugent-yellow-dark: #cca900;
+  --color-ugent-yellow-light: #ffe04d;
+  
+  --font-sans: "UGentPannoText", "Panno Text", "Inter", Arial, Helvetica, sans-serif;
+  --font-display: "UGentPannoText", "Panno Text", "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}

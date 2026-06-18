@@ -1,0 +1,6 @@
+{
+  "name": "UGent Poster Prize Voting",
+  "description": "Secure and real-time voting system for the Ghent University Poster Prize. Restrict voting to whitelisted emails and reveal results upon voting conclusion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
