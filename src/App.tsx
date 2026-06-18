@@ -74,12 +74,15 @@ interface AdminState {
 }
 
 // ==================== SMART CLIENT-SIDE FALLBACK (FOR GITHUB PAGES) ====================
+if (typeof window !== "undefined") {
+  localStorage.removeItem("force_static_fallback");
+}
+
 let globalStaticFallback = typeof window !== "undefined" && (
   window.location.hostname.endsWith("github.io") ||
   window.location.hostname.endsWith("gitlab.io") ||
   window.location.hostname.endsWith("pages.dev") ||
-  window.location.protocol === "file:" ||
-  localStorage.getItem("force_static_fallback") === "true"
+  window.location.protocol === "file:"
 );
 
 const DB_STORAGE_KEY = "ugent_ballot_local_db";
@@ -566,17 +569,13 @@ const apiFetch = async (url: string, init?: RequestInit): Promise<Response | Moc
   try {
     const res = await window.fetch(url, init);
     if (!res.ok && res.status === 404 && url.startsWith("/api/")) {
-      console.warn("Backend API returned 404. Switching to Local Storage Backend Fallback.");
-      globalStaticFallback = true;
-      localStorage.setItem("force_static_fallback", "true");
+      console.warn("Backend API returned 404. Falling back to temporary mock handler.");
       return handleMockRequest(url, init);
     }
     return res;
   } catch (err) {
     if (url.startsWith("/api/")) {
-      console.warn("Backend API connection failure. Switching to Local Storage Backend Fallback.", err);
-      globalStaticFallback = true;
-      localStorage.setItem("force_static_fallback", "true");
+      console.warn("Backend API connection failure. Falling back to temporary mock handler.", err);
       return handleMockRequest(url, init);
     }
     throw err;
