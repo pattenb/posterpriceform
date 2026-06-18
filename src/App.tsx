@@ -70,7 +70,383 @@ interface AdminState {
   }>;
 }
 
+// ==================== SMART CLIENT-SIDE FALLBACK (FOR GITHUB PAGES) ====================
+let globalStaticFallback = typeof window !== "undefined" && (
+  window.location.hostname.endsWith("github.io") ||
+  window.location.hostname.endsWith("gitlab.io") ||
+  window.location.hostname.endsWith("pages.dev") ||
+  window.location.protocol === "file:" ||
+  localStorage.getItem("force_static_fallback") === "true"
+);
+
+const DB_STORAGE_KEY = "ugent_ballot_local_db";
+
+const getLocalDb = () => {
+  const data = localStorage.getItem(DB_STORAGE_KEY);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  const initialDb = {
+    settings: {
+      votingConcluded: false,
+      votingEndTime: null,
+      adminPin: "1234",
+    },
+    voters: [
+      { email: "pat.borra@ugent.be", pin: null, hasVoted: false, votedAt: null },
+      { email: "els.bruneel@ugent.be", pin: null, hasVoted: false, votedAt: null },
+      { email: "borrapat@gmail.com", pin: null, hasVoted: false, votedAt: null }
+    ],
+    options: [
+      {
+        id: "1",
+        title: "Poster 1",
+        author: "Presenter 1",
+        abstract: "Abstract or description for Poster 1. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+      },
+      {
+        id: "2",
+        title: "Poster 2",
+        author: "Presenter 2",
+        abstract: "Abstract or description for Poster 2. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+      },
+      {
+        id: "3",
+        title: "Poster 3",
+        author: "Presenter 3",
+        abstract: "Abstract or description for Poster 3. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+      },
+      {
+        id: "4",
+        title: "Poster 4",
+        author: "Presenter 4",
+        abstract: "Abstract or description for Poster 4. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+      }
+    ],
+    votes: []
+  };
+  localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(initialDb));
+  return initialDb;
+};
+
+const saveLocalDb = (db: any) => {
+  localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(db));
+};
+
+class MockResponse {
+  ok: boolean;
+  status: number;
+  private data: any;
+
+  constructor(data: any, status = 200) {
+    this.ok = status >= 200 && status < 300;
+    this.status = status;
+    this.data = data;
+  }
+
+  async json() {
+    return this.data;
+  }
+}
+
+const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockResponse> => {
+  let body: any = {};
+  if (init && init.body) {
+    try {
+      body = JSON.parse(init.body as string);
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  const db = getLocalDb();
+
+  const respond = (data: any, status = 200) => {
+    return new MockResponse(data, status);
+  };
+
+  // 1. GET /api/state
+  if (url === "/api/state") {
+    let concluded = db.settings.votingConcluded;
+    if (db.settings.votingEndTime) {
+      const endTime = new Date(db.settings.votingEndTime).getTime();
+      const now = new Date().getTime();
+      if (now >= endTime && !db.settings.votingConcluded) {
+        db.settings.votingConcluded = true;
+        saveLocalDb(db);
+        concluded = true;
+      }
+    }
+
+    const displayOptions = db.options.map((opt: any) => ({ ...opt, votes: null }));
+
+    return respond({
+      votingConcluded: concluded,
+      votingEndTime: db.settings.votingEndTime,
+      options: displayOptions,
+      totalVotersCount: db.voters.length,
+      totalVotesCast: db.votes.length,
+      votersList: db.voters.map((v: any) => ({
+        email: v.email,
+        hasVoted: v.hasVoted,
+        votedAt: v.votedAt
+      }))
+    });
+  }
+
+  // check email
+  if (url === "/api/check-email") {
+    const email = (body.email || "").trim().toLowerCase();
+    const voter = db.voters.find((v: any) => v.email.toLowerCase() === email);
+
+    if (!voter) {
+      return respond({
+        isWhitelisted: false,
+        hasVoted: false,
+        needsPinSetup: false
+      });
+    }
+
+    return respond({
+      isWhitelisted: true,
+      hasVoted: voter.hasVoted,
+      needsPinSetup: voter.pin === null
+    });
+  }
+
+  // voter login status
+  if (url === "/api/voter-login") {
+    const email = (body.email || "").trim().toLowerCase();
+    const pin = (body.pin || "").trim();
+
+    if (pin.length < 4) {
+      return respond({ error: "PIN status must be at least 4 digits" }, 400);
+    }
+
+    const voterIndex = db.voters.findIndex((v: any) => v.email.toLowerCase() === email);
+    if (voterIndex === -1) {
+      return respond({ error: "Email selection is not whitelisted" }, 403);
+    }
+
+    const voter = db.voters[voterIndex];
+    if (voter.pin === null) {
+      db.voters[voterIndex].pin = pin;
+      saveLocalDb(db);
+      return respond({ success: true, message: "PIN registered successfully" });
+    } else if (voter.pin !== pin) {
+      return respond({ error: "Incorrect PIN" }, 401);
+    }
+
+    return respond({ success: true, message: "Logged in successfully" });
+  }
+
+  // cast vote
+  if (url === "/api/vote") {
+    const email = (body.email || "").trim().toLowerCase();
+    const pin = (body.pin || "").trim();
+    const optionId = String(body.optionId);
+
+    let concluded = db.settings.votingConcluded;
+    if (db.settings.votingEndTime) {
+      const endTime = new Date(db.settings.votingEndTime).getTime();
+      const now = new Date().getTime();
+      if (now >= endTime) {
+        db.settings.votingConcluded = true;
+        saveLocalDb(db);
+        concluded = true;
+      }
+    }
+
+    if (concluded) {
+      return respond({ error: "The voting period has concluded!" }, 400);
+    }
+
+    const voterIndex = db.voters.findIndex((v: any) => v.email.toLowerCase() === email);
+    if (voterIndex === -1) {
+      return respond({ error: "Email not whitelisted" }, 403);
+    }
+
+    const voter = db.voters[voterIndex];
+    if (voter.pin !== pin) {
+      return respond({ error: "Incorrect PIN passcode" }, 401);
+    }
+
+    if (voter.hasVoted) {
+      return respond({ error: "You have already cast your vote!" }, 400);
+    }
+
+    const optionExists = db.options.some((o: any) => String(o.id) === optionId);
+    if (!optionExists) {
+      return respond({ error: "Invalid poster option" }, 400);
+    }
+
+    const timestamp = new Date().toISOString();
+    db.votes.push({
+      voterEmail: email,
+      optionId,
+      timestamp
+    });
+
+    db.voters[voterIndex].hasVoted = true;
+    db.voters[voterIndex].votedAt = timestamp;
+
+    saveLocalDb(db);
+    return respond({ success: true, message: "Vote cast successfully!" });
+  }
+
+  // admin login
+  if (url === "/api/admin/login") {
+    const adminPin = (body.adminPin || "").trim();
+    if (adminPin === db.settings.adminPin) {
+      return respond({ success: true });
+    } else {
+      return respond({ error: "Incorrect Administrative PIN" }, 401);
+    }
+  }
+
+  // admin state
+  if (url === "/api/admin/state") {
+    const adminPin = (body.adminPin || "").trim();
+    if (adminPin !== db.settings.adminPin) {
+      return respond({ error: "Access Denied" }, 401);
+    }
+
+    const displayOptions = db.options.map((opt: any) => {
+      const voteCount = db.votes.filter((v: any) => String(v.optionId) === String(opt.id)).length;
+      return { ...opt, votes: voteCount };
+    });
+
+    return respond({
+      settings: db.settings,
+      voters: db.voters,
+      options: displayOptions,
+      votes: db.votes
+    });
+  }
+
+  // admin update settings
+  if (url === "/api/admin/update-settings") {
+    const { adminPin, votingConcluded, votingEndTime, newAdminPin } = body;
+    if (adminPin !== db.settings.adminPin) {
+      return respond({ error: "Access Denied" }, 401);
+    }
+
+    db.settings.votingConcluded = !!votingConcluded;
+    db.settings.votingEndTime = votingEndTime || null;
+    if (newAdminPin && typeof newAdminPin === "string" && newAdminPin.trim().length >= 4) {
+      db.settings.adminPin = newAdminPin.trim();
+    }
+
+    saveLocalDb(db);
+    return respond({ success: true, settings: db.settings });
+  }
+
+  // admin update whitelist
+  if (url === "/api/admin/update-whitelist") {
+    const { adminPin, emails } = body;
+    if (adminPin !== db.settings.adminPin) {
+      return respond({ error: "Access Denied" }, 401);
+    }
+
+    if (!Array.isArray(emails)) {
+      return respond({ error: "Emails list format is invalid" }, 400);
+    }
+
+    const cleanEmails = emails.map((e: any) => String(e).trim().toLowerCase()).filter(Boolean);
+    const updatedVoters = cleanEmails.map(email => {
+      const existing = db.voters.find((v: any) => v.email.toLowerCase() === email);
+      if (existing) {
+        return existing;
+      } else {
+        return { email, pin: null, hasVoted: false, votedAt: null };
+      }
+    });
+
+    db.voters = updatedVoters;
+    db.votes = db.votes.filter((v: any) => cleanEmails.includes(v.voterEmail));
+
+    saveLocalDb(db);
+    return respond({ success: true, voters: db.voters });
+  }
+
+  // admin update options
+  if (url === "/api/admin/update-options") {
+    const { adminPin, options } = body;
+    if (adminPin !== db.settings.adminPin) {
+      return respond({ error: "Access Denied" }, 401);
+    }
+
+    if (!Array.isArray(options)) {
+      return respond({ error: "Options list format is invalid" }, 400);
+    }
+
+    db.options = options.map((opt: any) => ({
+      id: String(opt.id),
+      title: String(opt.title || `Poster ${opt.id}`),
+      author: String(opt.author || `Presenter ${opt.id}`),
+      abstract: String(opt.abstract || "")
+    }));
+
+    saveLocalDb(db);
+    return respond({ success: true, options: db.options });
+  }
+
+  // admin reset
+  if (url === "/api/admin/reset") {
+    const { adminPin } = body;
+    if (adminPin !== db.settings.adminPin) {
+      return respond({ error: "Access Denied" }, 401);
+    }
+
+    db.votes = [];
+    db.voters = db.voters.map((v: any) => ({
+      ...v,
+      pin: null,
+      hasVoted: false,
+      votedAt: null
+    }));
+    db.settings.votingConcluded = false;
+    db.settings.votingEndTime = null;
+
+    saveLocalDb(db);
+    return respond({ success: true });
+  }
+
+  return respond({ error: "Endpoint Not Found" }, 404);
+};
+
+const apiFetch = async (url: string, init?: RequestInit): Promise<Response | MockResponse> => {
+  if (globalStaticFallback) {
+    return handleMockRequest(url, init);
+  }
+
+  try {
+    const res = await window.fetch(url, init);
+    if (!res.ok && res.status === 404 && url.startsWith("/api/")) {
+      console.warn("Backend API returned 404. Switching to Local Storage Backend Fallback.");
+      globalStaticFallback = true;
+      localStorage.setItem("force_static_fallback", "true");
+      return handleMockRequest(url, init);
+    }
+    return res;
+  } catch (err) {
+    if (url.startsWith("/api/")) {
+      console.warn("Backend API connection failure. Switching to Local Storage Backend Fallback.", err);
+      globalStaticFallback = true;
+      localStorage.setItem("force_static_fallback", "true");
+      return handleMockRequest(url, init);
+    }
+    throw err;
+  }
+};
+
 export default function App() {
+  const fetch = apiFetch;
   // --- Public / Voter State ---
   const [publicState, setPublicState] = useState<PublicState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +493,7 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err.message || "Connection failure to the corporate backend");
+      setLoading(false);
     }
   };
 
@@ -543,6 +920,13 @@ export default function App() {
 
           {/* Quick-Stats & Admin Authentication button */}
           <div className="flex flex-wrap items-center gap-3.5">
+            {globalStaticFallback && (
+              <div className="bg-amber-50 text-amber-800 border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-1.5 text-[11px] font-bold shadow-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                <span>GitHub Pages Sandbox Mode (Local JSON DB)</span>
+              </div>
+            )}
+
             {publicState && (
               <div className="bg-slate-105 bg-slate-100 rounded-lg px-4 py-2 border border-slate-200 flex items-center gap-4 text-xs font-semibold text-slate-700">
                 {publicState.votingConcluded ? (
