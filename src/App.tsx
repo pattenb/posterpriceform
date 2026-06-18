@@ -30,6 +30,7 @@ interface PublicState {
   votingEndTime: string | null;
   options: Array<{
     id: string;
+    category?: "phd_postdoc" | "master_student";
     title: string;
     author: string;
     abstract: string;
@@ -58,6 +59,7 @@ interface AdminState {
   }>;
   options: Array<{
     id: string;
+    category?: "phd_postdoc" | "master_student";
     title: string;
     author: string;
     abstract: string;
@@ -67,6 +69,7 @@ interface AdminState {
     voterEmail: string;
     optionId: string;
     timestamp: string;
+    category?: "phd_postdoc" | "master_student";
   }>;
 }
 
@@ -104,28 +107,172 @@ const getLocalDb = () => {
     ],
     options: [
       {
-        id: "1",
-        title: "Poster 1",
-        author: "Presenter 1",
-        abstract: "Abstract or description for Poster 1. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+        id: "phd-1",
+        category: "phd_postdoc",
+        title: "The role of the parameter landscape in Hartree–Fock quantum computing benchmarks",
+        author: "Ruben Van der Stichelen",
+        abstract: "An in-depth investigation into parameter landscape characteristics in Hartree–Fock quantum computing benchmarks, exploring optimization challenges, convergence, and performance thresholds."
       },
       {
-        id: "2",
-        title: "Poster 2",
-        author: "Presenter 2",
-        abstract: "Abstract or description for Poster 2. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+        id: "phd-2",
+        category: "phd_postdoc",
+        title: "InP Quantum Dots: from Atomistic Reconstruction to Opto-Electronic Properties",
+        author: "Norick De Vlamynck",
+        abstract: "Exploring indium phosphide (InP) quantum dots through atomistic reconstruction techniques and analyzing their corresponding opto-electronic signatures and potential applications."
       },
       {
-        id: "3",
-        title: "Poster 3",
-        author: "Presenter 3",
-        abstract: "Abstract or description for Poster 3. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+        id: "phd-3",
+        category: "phd_postdoc",
+        title: "Improving Untargeted Metabolomic Analysis in HIV-Infected Plasma Through Miniaturized Reversed-Phase Chromatography",
+        author: "Lander Iterbeke",
+        abstract: "Methodologies and improvements for untargeted metabolomic screening of HIV-infected plasma utilizing state-of-the-art miniaturized reversed-phase high-performance liquid chromatography."
       },
       {
-        id: "4",
-        title: "Poster 4",
-        author: "Presenter 4",
-        abstract: "Abstract or description for Poster 4. The admin can update this text to its final title, presenter and content later using the settings gear in the top right."
+        id: "phd-4",
+        category: "phd_postdoc",
+        title: "Combining Per-Aqueous and Chiral Reversed-Phase Separation Modes Towards a Comprehensive Two-Dimensional LC Platform for Amino Acid Analysis",
+        author: "José Meneses",
+        abstract: "Developing a multi-dimensional liquid chromatography platform that integrates per-aqueous and chiral reversed-phase systems to provide highly comprehensive amino acid separations."
+      },
+      {
+        id: "phd-5",
+        category: "phd_postdoc",
+        title: "Hide and Seek - Amide Rotation-induced Chirality Hidden in Plain Sight",
+        author: "Sean Verschaeve",
+        abstract: "Uncovering hidden conformational stereochemistry and dynamics arising from hindered amide rotation-induced chirality inside complex molecular assemblies."
+      },
+      {
+        id: "phd-6",
+        category: "phd_postdoc",
+        title: "Exploring Tm-Yb(-Nd)-doped LiLuF4 NPs as a novel downshifting NIR thermometer",
+        author: "Petryna Sofia",
+        abstract: "Investigating trivalent thulium, ytterbium, and neodymium co-doped lithium lutetium fluoride nanoparticles as high-sensitivity luminescent probes for near-infrared temperature sensing."
+      },
+      {
+        id: "phd-7",
+        category: "phd_postdoc",
+        title: "Biodegradable Na₃ZrF₇:Yb³⁺–Ho³⁺–Er³⁺ Nanoparticles as Luminescent Nanothermometers: From Downshifting Emission to Multifunctional Platforms",
+        author: "Abedi Tameh Fatemeh",
+        abstract: "Synthesis and optical characterization of biodegradable sodium zirconium fluoride nanothermometers co-doped with lanthanide ions for multi-functional biomedical imaging and thermal tracking."
+      },
+      {
+        id: "phd-8",
+        category: "phd_postdoc",
+        title: "Terahertz Spectroscopy of Covalent Organic Frameworks",
+        author: "Gitta Van Hoof",
+        abstract: "Employing ultra-fast terahertz spectroscopy to investigate the structural dynamics, vibration modes, and charge transport behaviors inside crystalline covalent organic frameworks (COFs)."
+      },
+      {
+        id: "phd-9",
+        category: "phd_postdoc",
+        title: "Metal Organic Frameworks for Supercapacitors",
+        author: "Wafaa Ahmed Mohamed Moawad",
+        abstract: "Design, syntheses, and electrochemical performances of custom porous metal-organic frameworks (MOFs) engineered to maximize specific capacitances and cycle life in supercapacitor applications."
+      },
+      {
+        id: "master-1",
+        category: "master_student",
+        title: "The Evaluation of Data Processing Methods for Macro-Raman Mapping of Art Objects",
+        author: "Rachael Britton",
+        abstract: "Master research poster detailing the evaluation of alternative statistical processing and baseline correction methods of high-resolution micro/macro-Raman spectral mapping of cultural heritage artifacts."
+      },
+      {
+        id: "master-2",
+        category: "master_student",
+        title: "Hybrid Nanomaterials Combining Thermometry and Photodynamic Therapy",
+        author: "Brianna Woolery",
+        abstract: "Investigating multifunctional hybrid nanocomposites capable of synergistic optical temperature reading along with localized targeted photodynamic therapeutic excitation."
+      },
+      {
+        id: "master-3",
+        category: "master_student",
+        title: "Determination of Multi-Elemental Paleoclimate Proxies in Bivalve Shells via LA-ICP-TOF-MS Mapping",
+        author: "Robbe Van Ryckeghem",
+        abstract: "Utilizing advanced high-speed laser ablation inductively coupled plasma time-of-flight mass spectrometry to map high-resolution trace elements on bivalve shell thin sections as paleotemperature proxies."
+      },
+      {
+        id: "master-4",
+        category: "master_student",
+        title: "XRFPM: A Fundamental Parameter Based Code for the Analysis of XRF Spectra",
+        author: "Luca De Bruyn",
+        abstract: "Developing and compiling a lightweight, high-performance physical script utilizing fundamental parameter models for swift quantitative calibration and deconvolution of complex X-ray fluorescence spectra."
+      },
+      {
+        id: "master-5",
+        category: "master_student",
+        title: "Atomic Layer Deposition of functional coatings for Lithium-Ion batteries",
+        author: "Mitch Bruyneel",
+        abstract: "Employing precise nanoscale atomic layer deposition (ALD) techniques to engineer uniform, ultra-thin protecting layers stabilizing cathode interfaces against degradation in rechargeable batteries."
+      },
+      {
+        id: "master-6",
+        category: "master_student",
+        title: "Gallium Incorporation in In(As,P)/InP Quantum Dots with Molten Salt Processing",
+        author: "Ramón Coolens",
+        abstract: "Synthesizing and structural tracking of gallium introduction inside indium arsenide phosphide quantum dots using controlled high-temperature molten salt reactions."
+      },
+      {
+        id: "master-7",
+        category: "master_student",
+        title: "Optimisation of Thiolated Self-Assembled Monolayers for Antibody Attachment to Gold Electrodes",
+        author: "Ruby Cornand",
+        abstract: "Systematic optimization of gold surface self-assembly dynamics using thiolated organic chains designed to promote bio-compatible, high-density receptor and antibody immobilization."
+      },
+      {
+        id: "master-8",
+        category: "master_student",
+        title: "Analysis of Surface Orbitals in III-V Core Quantum Dot Alloys",
+        author: "Mattice Criel",
+        abstract: "Theoretical modeling and experimental benchmarking of the electronic structure, valence boundaries, and surface dangling orbital states in III-V semiconductor quantum dot core-shell structures."
+      },
+      {
+        id: "master-9",
+        category: "master_student",
+        title: "Dynamic poly(norbornene) networks making use of γ-hydroxy amide chemistry",
+        author: "Kenny Deré",
+        abstract: "Developing recyclable, self-healing polymer materials utilizing dynamic covalent exchange crossings based on retro-active γ-hydroxy amide reactions inside substituted norbornene backbones."
+      },
+      {
+        id: "master-10",
+        category: "master_student",
+        title: "From Strong to Weak Magnetic Fields: Characterizing the Evolution and Persistence of Exotic Magnetic Effects",
+        author: "Thibo Van Eeckhoorn",
+        abstract: "Investigating high-field and low-field magnetic susceptibility alignments, and tracking structural phase changes with persistent macroscopic electronic interactions."
+      },
+      {
+        id: "master-11",
+        category: "master_student",
+        title: "Modified gelatin as a biodegradable gene delivery system",
+        author: "Kobe De Bruyne",
+        abstract: "Synthesizing responsive chemically-modified gelatin nanopolyplexes as safe, non-toxic, and biological-stimuli micro-carriers for targeted intracellular gene therapeutics."
+      },
+      {
+        id: "master-12",
+        category: "master_student",
+        title: "Ga Alloying in InAs Quantum Dots Enabling SWIR Emission",
+        author: "Wiebe Volckaert",
+        abstract: "Tuning structural bandgaps to enable deep short-wave infrared (SWIR) luminescence through precise gallium alloying on indium-arsenide crystal cores."
+      },
+      {
+        id: "master-13",
+        category: "master_student",
+        title: "Statistical Characterization of Sampling Uncertainty in Maximal Probability Domains from Quantum Computing Wavefunctions",
+        author: "Yarno De Jaeger",
+        abstract: "Developing bounds and metrics for the estimation errors and sampling bounds of state probabilities drawn from simulated NISQ-era quantum computing wavefunctions."
+      },
+      {
+        id: "master-14",
+        category: "master_student",
+        title: "Synthesis and biological evaluation of fluorinated morphine glucuronide analogues",
+        author: "Agir Verhulst",
+        abstract: "Synthesizing novel fluorinated organic structures imitating active morphine glucuronides to evaluate competitive biological receptor binding and structural metabolic stability."
+      },
+      {
+        id: "master-15",
+        category: "master_student",
+        title: "Development of antioxidant hybrid hydrogel wound dressings via nanotechnology",
+        author: "Hannah Meuleman",
+        abstract: "Engineering highly bio-compatible hydrogel matrices embedded with antioxidant nanomaterials designed to actively scavenge reactive oxygen species (ROS) and accelerate wound recovery."
       }
     ],
     votes: []
@@ -191,11 +338,7 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
       options: displayOptions,
       totalVotersCount: db.voters.length,
       totalVotesCast: db.votes.length,
-      votersList: db.voters.map((v: any) => ({
-        email: v.email,
-        hasVoted: v.hasVoted,
-        votedAt: v.votedAt
-      }))
+      votersList: []
     });
   }
 
@@ -207,48 +350,19 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
     if (!voter) {
       return respond({
         isWhitelisted: false,
-        hasVoted: false,
-        needsPinSetup: false
+        hasVoted: false
       });
     }
 
     return respond({
       isWhitelisted: true,
-      hasVoted: voter.hasVoted,
-      needsPinSetup: voter.pin === null
+      hasVoted: voter.hasVoted
     });
-  }
-
-  // voter login status
-  if (url === "/api/voter-login") {
-    const email = (body.email || "").trim().toLowerCase();
-    const pin = (body.pin || "").trim();
-
-    if (pin.length < 4) {
-      return respond({ error: "PIN status must be at least 4 digits" }, 400);
-    }
-
-    const voterIndex = db.voters.findIndex((v: any) => v.email.toLowerCase() === email);
-    if (voterIndex === -1) {
-      return respond({ error: "Email selection is not whitelisted" }, 403);
-    }
-
-    const voter = db.voters[voterIndex];
-    if (voter.pin === null) {
-      db.voters[voterIndex].pin = pin;
-      saveLocalDb(db);
-      return respond({ success: true, message: "PIN registered successfully" });
-    } else if (voter.pin !== pin) {
-      return respond({ error: "Incorrect PIN" }, 401);
-    }
-
-    return respond({ success: true, message: "Logged in successfully" });
   }
 
   // cast vote
   if (url === "/api/vote") {
     const email = (body.email || "").trim().toLowerCase();
-    const pin = (body.pin || "").trim();
     const optionId = String(body.optionId);
 
     let concluded = db.settings.votingConcluded;
@@ -272,25 +386,49 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
     }
 
     const voter = db.voters[voterIndex];
-    if (voter.pin !== pin) {
-      return respond({ error: "Incorrect PIN passcode" }, 401);
-    }
 
     if (voter.hasVoted) {
-      return respond({ error: "You have already cast your vote!" }, 400);
+      return respond({ error: "You have already cast your ballot!" }, 400);
     }
 
-    const optionExists = db.options.some((o: any) => String(o.id) === optionId);
-    if (!optionExists) {
-      return respond({ error: "Invalid poster option" }, 400);
+    const selections: string[] = [];
+    if (body.phdPosterId) {
+      const exists = db.options.some((o: any) => String(o.id) === String(body.phdPosterId));
+      if (!exists) {
+        return respond({ error: "Selected PhD/Postdoc option is invalid" }, 400);
+      }
+      selections.push(String(body.phdPosterId));
+    }
+    if (body.masterPosterId) {
+      const exists = db.options.some((o: any) => String(o.id) === String(body.masterPosterId));
+      if (!exists) {
+        return respond({ error: "Selected Master Student option is invalid" }, 400);
+      }
+      selections.push(String(body.masterPosterId));
+    }
+
+    if (selections.length === 0 && optionId) {
+      const exists = db.options.some((o: any) => String(o.id) === optionId);
+      if (!exists) {
+        return respond({ error: "Invalid poster option" }, 400);
+      }
+      selections.push(optionId);
+    }
+
+    if (selections.length === 0) {
+      return respond({ error: "Please select at least one poster before submitting!" }, 400);
     }
 
     const timestamp = new Date().toISOString();
-    db.votes.push({
-      voterEmail: email,
-      optionId,
-      timestamp
-    });
+    for (const sId of selections) {
+      const opt = db.options.find((o: any) => String(o.id) === sId);
+      db.votes.push({
+        voterEmail: email,
+        optionId: sId,
+        timestamp,
+        category: opt?.category
+      });
+    }
 
     db.voters[voterIndex].hasVoted = true;
     db.voters[voterIndex].votedAt = timestamp;
@@ -445,6 +583,12 @@ const apiFetch = async (url: string, init?: RequestInit): Promise<Response | Moc
   }
 };
 
+const getDisplayId = (id: string | null) => {
+  if (!id) return "";
+  const parts = id.split("-");
+  return parts[parts.length - 1] || id;
+};
+
 export default function App() {
   const fetch = apiFetch;
   // --- Public / Voter State ---
@@ -454,12 +598,12 @@ export default function App() {
 
   // --- Voter Session State ---
   const [emailInput, setEmailInput] = useState("");
-  const [pinInput, setPinInput] = useState("");
   const [checkingEmail, setCheckingEmail] = useState(false);
-  const [voterStep, setVoterStep] = useState<"enter-email" | "enter-pin" | "setup-pin" | "voting" | "thank-you">("enter-email");
+  const [voterStep, setVoterStep] = useState<"enter-email" | "voting" | "thank-you">("enter-email");
   const [tempVoterEmail, setTempVoterEmail] = useState("");
   const [voterMessage, setVoterMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
-  const [selectedPosterId, setSelectedPosterId] = useState<string | null>(null);
+  const [selectedPhdPosterId, setSelectedPhdPosterId] = useState<string | null>(null);
+  const [selectedMasterPosterId, setSelectedMasterPosterId] = useState<string | null>(null);
   const [submittingVote, setSubmittingVote] = useState(false);
 
   // --- Admin Modal State ---
@@ -538,9 +682,8 @@ export default function App() {
   // Restore local session to persist login status on refresh
   useEffect(() => {
     const savedEmail = localStorage.getItem("voter_email");
-    const savedPin = localStorage.getItem("voter_pin");
 
-    if (savedEmail && savedPin) {
+    if (savedEmail) {
       fetch("/api/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -550,7 +693,6 @@ export default function App() {
       .then(data => {
         if (data.isWhitelisted) {
           setTempVoterEmail(savedEmail);
-          setPinInput(savedPin);
           if (data.hasVoted) {
             setVoterStep("thank-you");
           } else {
@@ -595,15 +737,12 @@ export default function App() {
       }
 
       setTempVoterEmail(email);
+      localStorage.setItem("voter_email", email);
 
       if (data.hasVoted) {
-        // Direct to PIN entry so they can authenticate and review their Receipt status
-        setVoterStep("enter-pin");
-        setVoterMessage({ text: "Account has already cast a ballot. Verify PIN to view receipt.", type: "success" });
-      } else if (data.needsPinSetup) {
-        setVoterStep("setup-pin");
+        setVoterStep("thank-you");
       } else {
-        setVoterStep("enter-pin");
+        setVoterStep("voting");
       }
     } catch (err: any) {
       setVoterMessage({ text: err.message || "Failed to talk to system database", type: "error" });
@@ -612,72 +751,22 @@ export default function App() {
     }
   };
 
-  // Setup PIN and Login
-  const handleVoterAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCheckingEmail(true);
-    setVoterMessage(null);
-
-    const pin = pinInput.trim();
-    if (pin.length < 4) {
-      setVoterMessage({ text: "PIN passcode must consist of 4 or more digits", type: "error" });
-      setCheckingEmail(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/voter-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: tempVoterEmail, pin })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Authentication verification failed");
-      }
-
-      // Store credentials locally
-      localStorage.setItem("voter_email", tempVoterEmail);
-      localStorage.setItem("voter_pin", pin);
-
-      // Verify vote status
-      const checkRes = await fetch("/api/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: tempVoterEmail })
-      });
-      const checkData = await checkRes.json();
-
-      if (checkData.hasVoted) {
-        setVoterStep("thank-you");
-      } else {
-        setVoterStep("voting");
-      }
-    } catch (err: any) {
-      setVoterMessage({ text: err.message || "Passcode verification rejected", type: "error" });
-    } finally {
-      setCheckingEmail(false);
-    }
-  };
-
   // Cast vote
   const handleCastVote = async () => {
-    if (!selectedPosterId) {
-      alert("Please select one of the poster options first!");
+    if (!selectedPhdPosterId && !selectedMasterPosterId) {
+      alert("Please select at least one poster option before submitting your ballot!");
       return;
     }
 
     setSubmittingVote(true);
     try {
-      const pin = localStorage.getItem("voter_pin") || pinInput;
       const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: tempVoterEmail,
-          pin,
-          optionId: selectedPosterId
+          phdPosterId: selectedPhdPosterId,
+          masterPosterId: selectedMasterPosterId
         })
       });
 
@@ -698,11 +787,10 @@ export default function App() {
   // Voter Sign Out
   const handleVoterLogout = () => {
     localStorage.removeItem("voter_email");
-    localStorage.removeItem("voter_pin");
     setEmailInput("");
-    setPinInput("");
     setTempVoterEmail("");
-    setSelectedPosterId(null);
+    setSelectedPhdPosterId(null);
+    setSelectedMasterPosterId(null);
     setVoterMessage(null);
     setVoterStep("enter-email");
   };
@@ -920,12 +1008,6 @@ export default function App() {
 
           {/* Quick-Stats & Admin Authentication button */}
           <div className="flex flex-wrap items-center gap-3.5">
-            {globalStaticFallback && (
-              <div className="bg-amber-50 text-amber-800 border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-1.5 text-[11px] font-bold shadow-xs">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-                <span>GitHub Pages Sandbox Mode (Local JSON DB)</span>
-              </div>
-            )}
 
             {publicState && (
               <div className="bg-slate-105 bg-slate-100 rounded-lg px-4 py-2 border border-slate-200 flex items-center gap-4 text-xs font-semibold text-slate-700">
@@ -989,104 +1071,222 @@ export default function App() {
                 <span>Error: {errorMessage}</span>
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
-                {publicState?.options.map((poster) => {
-                  const isExpanded = expandedPosterId === poster.id;
-                  const isSelectableToVote = voterStep === "voting" && !publicState?.votingConcluded;
-                  const isBallotChoice = selectedPosterId === poster.id;
+              <div className="flex flex-col gap-6">
+                {/* CATEGORY A: PhD & Postdoc */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                    <h3 className="font-display font-extrabold text-[#1E64C8] text-xs uppercase tracking-wider">
+                      PhD & Postdoc Poster Prize
+                    </h3>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    {(publicState?.options || [])
+                      .filter(o => o.category === "phd_postdoc" || (o.category === undefined && parseInt(o.id) <= 2))
+                      .map((poster) => {
+                        const isExpanded = expandedPosterId === poster.id;
+                        const isSelectableToVote = voterStep === "voting" && !publicState?.votingConcluded;
+                        const isBallotChoice = selectedPhdPosterId === poster.id;
 
-                  return (
-                    <div 
-                      key={poster.id}
-                      className={`border rounded-xl transition-all overflow-hidden ${
-                        isBallotChoice 
-                          ? "border-[#1E64C8] ring-1 ring-[#1E64C8]/30 shadow-sm" 
-                          : "border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      {/* Accordion Trigger area */}
-                      <button
-                        type="button"
-                        onClick={() => setExpandedPosterId(isExpanded ? null : poster.id)}
-                        className={`w-full text-left p-4 flex items-start justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors ${
-                          isExpanded ? "bg-slate-50/50" : ""
-                        }`}
-                      >
-                        <div className="flex gap-3">
-                          {/* Option Badge */}
-                          <span className={`h-7 w-7 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 ${
-                            isBallotChoice 
-                              ? "bg-[#1E64C8] text-white" 
-                              : "bg-slate-100 text-slate-600 border border-slate-200"
-                          }`}>
-                            {poster.id}
-                          </span>
-                          <div>
-                            <span className="text-[10px] font-mono tracking-wider font-semibold text-slate-400 block uppercase">
-                              Option {poster.id}
-                            </span>
-                            <h3 className="font-display font-extrabold text-sm sm:text-base text-slate-800 leading-tight mt-0.5">
-                              {poster.title}
-                            </h3>
-                            <span className="text-xs font-medium text-[#1E64C8] mt-1 inline-block">
-                              Presenter: {poster.author}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 shrink-0 self-center">
-                          {isBallotChoice && (
-                            <span className="text-[10px] font-mono font-bold uppercase bg-[#1E64C8] text-white rounded px-2 py-0.5 flex items-center gap-1 shrink-0">
-                              <Check className="w-3 h-3 stroke-[3]" /> Selected Choice
-                            </span>
-                          )}
-                          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                        </div>
-                      </button>
-
-                      {/* Expanding Content */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="bg-white border-t border-slate-150"
+                        return (
+                          <div 
+                            key={poster.id}
+                            className={`border rounded-xl transition-all overflow-hidden ${
+                              isBallotChoice 
+                                ? "border-[#1E64C8] ring-1 ring-[#1E64C8]/30 shadow-sm" 
+                                : "border-slate-200 hover:border-slate-300"
+                            }`}
                           >
-                            <div className="p-4 sm:p-5 flex flex-col gap-4">
-                              <div className="bg-[#1E64C8]/5 p-4 rounded-lg border border-[#1E64C8]/10">
-                                <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                  <FileText className="w-3.5 h-3.5 text-[#1E64C8]" />
-                                  Theoretical Poster Abstract
-                                </h4>
-                                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans whitespace-pre-line">
-                                  {poster.abstract || "Detailed content abstracts scheduled by academic presenter will appear here."}
-                                </p>
-                              </div>
-
-                              {isSelectableToVote && (
-                                <div className="flex justify-end pt-2 border-t border-slate-100">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedPosterId(poster.id)}
-                                    className={`text-xs font-semibold py-2 px-4 rounded-lg transition flex items-center gap-1.5 cursor-pointer hover:shadow-sm ${
-                                      isBallotChoice 
-                                        ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-default" 
-                                        : "bg-[#1E64C8] border border-[#1E64C8] text-white hover:bg-[#15458c]"
-                                    }`}
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
-                                    <span>{isBallotChoice ? "Currently Selected" : "Select Option " + poster.id + " as my Choice"}</span>
-                                  </button>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedPosterId(isExpanded ? null : poster.id)}
+                              className={`w-full text-left p-4 flex items-start justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors ${
+                                isExpanded ? "bg-slate-50/50" : ""
+                              }`}
+                            >
+                              <div className="flex gap-3">
+                                <span className={`h-7 w-7 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 ${
+                                  isBallotChoice 
+                                    ? "bg-[#1E64C8] text-white" 
+                                    : "bg-slate-100 text-slate-600 border border-slate-200"
+                                }`}>
+                                  {getDisplayId(poster.id)}
+                                </span>
+                                <div>
+                                  <span className="text-[10px] font-mono tracking-wider font-semibold text-slate-400 block uppercase">
+                                    Option {getDisplayId(poster.id)}
+                                  </span>
+                                  <h3 className="font-display font-extrabold text-sm sm:text-base text-slate-800 leading-tight mt-0.5">
+                                    {poster.title}
+                                  </h3>
+                                  <span className="text-xs font-medium text-[#1E64C8] mt-1 inline-block">
+                                    Presenter: {poster.author}
+                                  </span>
                                 </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 shrink-0 self-center">
+                                {isBallotChoice && (
+                                  <span className="text-[10px] font-mono font-bold uppercase bg-emerald-600 text-white rounded px-2.5 py-0.5 flex items-center gap-1 shrink-0 shadow-sm">
+                                    <Check className="w-3 h-3 stroke-[3]" /> Selected
+                                  </span>
+                                )}
+                                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                              </div>
+                            </button>
+
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="bg-white border-t border-slate-150"
+                                >
+                                  <div className="p-4 sm:p-5 flex flex-col gap-4">
+                                    <div className="bg-[#1E64C8]/5 p-4 rounded-lg border border-[#1E64C8]/10">
+                                      <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <FileText className="w-3.5 h-3.5 text-[#1E64C8]" />
+                                        Abstract details
+                                      </h4>
+                                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans whitespace-pre-line">
+                                        {poster.abstract || "Detailed content abstracts scheduled by academic presenter will appear here."}
+                                      </p>
+                                    </div>
+
+                                    {isSelectableToVote && (
+                                      <div className="flex justify-end pt-2 border-t border-slate-100">
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedPhdPosterId(isBallotChoice ? null : poster.id)}
+                                          className={`text-xs font-bold py-2 px-4 rounded-lg transition flex items-center gap-1.5 cursor-pointer hover:shadow-sm ${
+                                            isBallotChoice 
+                                              ? "bg-amber-500 border border-amber-600 text-white hover:bg-amber-650" 
+                                              : "bg-[#1E64C8] border border-[#1E64C8] text-white hover:bg-[#15458c]"
+                                          }`}
+                                        >
+                                          <Check className="w-3.5 h-3.5" />
+                                          <span>{isBallotChoice ? "Deselect this Poster" : "Select Option " + getDisplayId(poster.id) + " as my PhD/Postdoc Choice"}</span>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </motion.div>
                               )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* CATEGORY B: Master Students */}
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    <Trophy className="w-4 h-4 text-emerald-600" />
+                    <h3 className="font-display font-extrabold text-emerald-700 text-xs uppercase tracking-wider">
+                      Master Student Poster Prize
+                    </h3>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    {(publicState?.options || [])
+                      .filter(o => o.category === "master_student" || (o.category === undefined && parseInt(o.id) > 2))
+                      .map((poster) => {
+                        const isExpanded = expandedPosterId === poster.id;
+                        const isSelectableToVote = voterStep === "voting" && !publicState?.votingConcluded;
+                        const isBallotChoice = selectedMasterPosterId === poster.id;
+
+                        return (
+                          <div 
+                            key={poster.id}
+                            className={`border rounded-xl transition-all overflow-hidden ${
+                              isBallotChoice 
+                                ? "border-emerald-600 ring-1 ring-emerald-600/30 shadow-sm" 
+                                : "border-slate-200 hover:border-slate-300"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setExpandedPosterId(isExpanded ? null : poster.id)}
+                              className={`w-full text-left p-4 flex items-start justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors ${
+                                isExpanded ? "bg-slate-50/50" : ""
+                              }`}
+                            >
+                              <div className="flex gap-3">
+                                <span className={`h-7 w-7 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 ${
+                                  isBallotChoice 
+                                    ? "bg-emerald-600 text-white" 
+                                    : "bg-slate-100 text-slate-600 border border-slate-200"
+                                }`}>
+                                  {getDisplayId(poster.id)}
+                                </span>
+                                <div>
+                                  <span className="text-[10px] font-mono tracking-wider font-semibold text-slate-400 block uppercase">
+                                    Option {getDisplayId(poster.id)}
+                                  </span>
+                                  <h3 className="font-display font-extrabold text-sm sm:text-base text-slate-800 leading-tight mt-0.5">
+                                    {poster.title}
+                                  </h3>
+                                  <span className="text-xs font-medium text-[#1E64C8] mt-1 inline-block">
+                                    Presenter: {poster.author}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 shrink-0 self-center">
+                                {isBallotChoice && (
+                                  <span className="text-[10px] font-mono font-bold uppercase bg-emerald-600 text-white rounded px-2.5 py-0.5 flex items-center gap-1 shrink-0 shadow-sm">
+                                    <Check className="w-3 h-3 stroke-[3]" /> Selected
+                                  </span>
+                                )}
+                                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                              </div>
+                            </button>
+
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="bg-white border-t border-slate-150"
+                                >
+                                  <div className="p-4 sm:p-5 flex flex-col gap-4">
+                                    <div className="bg-[#1E64C8]/5 p-4 rounded-lg border border-[#1E64C8]/10">
+                                      <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <FileText className="w-3.5 h-3.5 text-[#1E64C8]" />
+                                        Abstract details
+                                      </h4>
+                                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans whitespace-pre-line">
+                                        {poster.abstract || "Detailed content abstracts scheduled by academic presenter will appear here."}
+                                      </p>
+                                    </div>
+
+                                    {isSelectableToVote && (
+                                      <div className="flex justify-end pt-2 border-t border-slate-100">
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedMasterPosterId(isBallotChoice ? null : poster.id)}
+                                          className={`text-xs font-bold py-2 px-4 rounded-lg transition flex items-center gap-1.5 cursor-pointer hover:shadow-sm ${
+                                            isBallotChoice 
+                                              ? "bg-amber-500 border border-amber-600 text-white hover:bg-amber-650" 
+                                              : "bg-emerald-600 border border-emerald-650 text-white hover:bg-emerald-700"
+                                          }`}
+                                        >
+                                          <Check className="w-3.5 h-3.5" />
+                                          <span>{isBallotChoice ? "Deselect this Poster" : "Select Option " + getDisplayId(poster.id) + " as my Master Student Choice"}</span>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1146,7 +1346,7 @@ export default function App() {
                         Identify Yourself
                       </h3>
                       <p className="text-xs text-slate-400 leading-relaxed mt-1 mb-5">
-                        Input your registered University email to authenticate or check ballot verification status.
+                        Input your registered email to authenticate or check ballot verification status.
                       </p>
 
                       <form onSubmit={handleCheckEmail} className="flex flex-col gap-4">
@@ -1187,139 +1387,6 @@ export default function App() {
                           )}
                         </button>
                       </form>
-
-                      {/* Demo testing helpers */}
-                      <div className="mt-8 pt-5 border-t border-slate-100">
-                        <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider block uppercase mb-2">
-                          📋 Preapproved Whitelist (For Testing)
-                        </span>
-                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex flex-col gap-1 text-[11px] font-mono select-all">
-                          <div className="flex justify-between hover:text-[#1E64C8] cursor-pointer" onClick={() => setEmailInput("Els.bruneel@ugent.be")}>
-                            <span>Els.bruneel@ugent.be</span>
-                            <span className="text-[9px] text-[#1E64C8] font-bold">Paste</span>
-                          </div>
-                          <div className="flex justify-between hover:text-[#1E64C8] cursor-pointer" onClick={() => setEmailInput("Pat.Borra@ugent.be")}>
-                            <span>Pat.Borra@ugent.be</span>
-                            <span className="text-[9px] text-[#1E64C8] font-bold">Paste</span>
-                          </div>
-                          <div className="flex justify-between hover:text-[#1E64C8] cursor-pointer" onClick={() => setEmailInput("borrapat@gmail.com")}>
-                            <span>borrapat@gmail.com</span>
-                            <span className="text-[9px] text-[#1E64C8] font-bold">Paste</span>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* STEP 2: Setup secure PIN code (First login) */}
-                  {voterStep === "setup-pin" && (
-                    <motion.div
-                      key="v-setup"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      <h3 className="text-base font-bold text-[#1E64C8] font-display flex items-center gap-1.5">
-                        <Lock className="w-4 h-4 text-amber-500" />
-                        <span>First Login PIN Registration</span>
-                      </h3>
-                      <p className="text-xs text-slate-500 leading-normal mt-1 mb-5">
-                        Configure a custom <strong>4-digit passcode PIN</strong> for <span className="font-semibold text-slate-700">{tempVoterEmail}</span>. You will use this key if you need to access your ballot verification receipt later.
-                      </p>
-
-                      <form onSubmit={handleVoterAuth} className="flex flex-col gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase font-mono mb-1.5">
-                            Setup Custom PIN (4-Digit numeric code)
-                          </label>
-                          <input
-                            type="password"
-                            required
-                            maxLength={6}
-                            placeholder="e.g. 8493"
-                            value={pinInput}
-                            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
-                            className="bg-slate-50 border border-slate-300 focus:border-[#1E64C8] focus:ring-1 focus:ring-[#1E64C8] rounded-lg p-2.5 w-full text-xs font-mono tracking-widest text-center"
-                          />
-                        </div>
-
-                        {voterMessage && (
-                          <div className="p-3 bg-red-50 border border-red-100 text-red-800 text-xs rounded-lg">
-                            {voterMessage.text}
-                          </div>
-                        )}
-
-                        <button
-                          type="submit"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs shadow-md transition cursor-pointer"
-                        >
-                          Confirm & Save Security PIN
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={() => setVoterStep("enter-email")}
-                          className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition self-center"
-                        >
-                          ← Go Back
-                        </button>
-                      </form>
-                    </motion.div>
-                  )}
-
-                  {/* STEP 3: Unlock with PIN */}
-                  {voterStep === "enter-pin" && (
-                    <motion.div
-                      key="v-pin"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      <h3 className="text-base font-bold text-slate-800 font-display flex items-center gap-1.5">
-                        <Lock className="w-4 h-4 text-[#1E64C8]" />
-                        <span>Security PIN Verification</span>
-                      </h3>
-                      <p className="text-xs text-slate-500 leading-normal mt-1 mb-5">
-                        Please unlock your security lock for <strong className="text-slate-700">{tempVoterEmail}</strong> to enter your voting pane.
-                      </p>
-
-                      <form onSubmit={handleVoterAuth} className="flex flex-col gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase font-mono mb-1.5">
-                            Enter Your 4-Digit PIN
-                          </label>
-                          <input
-                            type="password"
-                            required
-                            maxLength={6}
-                            placeholder="••••"
-                            value={pinInput}
-                            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
-                            className="bg-slate-50 border border-slate-300 focus:border-[#1E64C8] focus:ring-1 focus:ring-[#1E64C8] rounded-lg p-2.5 w-full text-xs font-mono tracking-widest text-center"
-                          />
-                        </div>
-
-                        {voterMessage && (
-                          <div className={`p-3 rounded-lg text-xs ${voterMessage.type === "success" ? "bg-emerald-50 text-emerald-800 border border-emerald-100" : "bg-red-50 text-red-800 border border-red-100"}`}>
-                            {voterMessage.text}
-                          </div>
-                        )}
-
-                        <button
-                          type="submit"
-                          className="bg-[#1E64C8] hover:bg-[#15458c] text-white font-bold py-2.5 px-4 rounded-lg text-xs shadow transition cursor-pointer"
-                        >
-                          Unlock Voting Deck
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={handleVoterLogout}
-                          className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition self-center"
-                        >
-                          ← Cancel & Change Email
-                        </button>
-                      </form>
                     </motion.div>
                   )}
 
@@ -1346,37 +1413,66 @@ export default function App() {
                         </button>
                       </div>
 
-                      <div className="border-t border-slate-100 pt-4">
+                      <div className="border-t border-slate-100 pt-4 flex flex-col gap-3">
                         <h4 className="text-xs font-bold text-slate-700 font-display">
-                          Your Active Choice selection:
+                          Your Active Choice selections:
                         </h4>
 
-                        {selectedPosterId ? (
-                          <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 p-4 rounded-xl mt-3">
-                            <span className="text-[10px] bg-emerald-600 text-white font-mono px-2 py-0.5 rounded uppercase font-bold">
-                              Poster Choice {selectedPosterId}
-                            </span>
-                            <div className="font-display font-extrabold text-sm text-slate-800 mt-2 leading-snug">
-                              "{publicState?.options.find(o => o.id === selectedPosterId)?.title}"
+                        {/* PhD selection card */}
+                        <div className="bg-slate-50 border border-slate-250/50 rounded-xl p-3">
+                          <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 block mb-1.5">
+                            Category A: PhD & Postdoc Poster Price
+                          </span>
+                          {selectedPhdPosterId ? (
+                            <div className="bg-white border border-emerald-100 p-2 rounded-lg flex items-start gap-2 shadow-sm">
+                              <span className="h-5 w-5 bg-[#1E64C8] text-white rounded font-mono font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5" title={`Option ID: ${selectedPhdPosterId}`}>
+                                {getDisplayId(selectedPhdPosterId)}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-xs text-slate-800 truncate">
+                                  "{publicState?.options.find(o => o.id === selectedPhdPosterId)?.title}"
+                                </div>
+                                <span className="text-[10px] text-slate-400 block truncate">
+                                  Presenter: {publicState?.options.find(o => o.id === selectedPhdPosterId)?.author}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-xs text-slate-400 font-medium block mt-1">
-                              Presenter: {publicState?.options.find(o => o.id === selectedPosterId)?.author}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="bg-slate-50 border border-slate-200 border-dashed rounded-xl p-6 text-center text-xs text-slate-400 mt-3 font-medium">
-                            No Poster Selected Yet.<br />
-                            <span className="text-[10px] text-slate-400 font-normal">Please select an option from the showcase catalog list on the left column.</span>
-                          </div>
-                        )}
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">No selection yet</span>
+                          )}
+                        </div>
+
+                        {/* Master selection card */}
+                        <div className="bg-slate-50 border border-slate-250/50 rounded-xl p-3">
+                          <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 block mb-1.5">
+                            Category B: Master Student Poster Price
+                          </span>
+                          {selectedMasterPosterId ? (
+                            <div className="bg-white border border-emerald-100 p-2 rounded-lg flex items-start gap-2 shadow-sm">
+                              <span className="h-5 w-5 bg-emerald-600 text-white rounded font-mono font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5" title={`Option ID: ${selectedMasterPosterId}`}>
+                                {getDisplayId(selectedMasterPosterId)}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-xs text-slate-800 truncate">
+                                  "{publicState?.options.find(o => o.id === selectedMasterPosterId)?.title}"
+                                </div>
+                                <span className="text-[10px] text-slate-400 block truncate">
+                                  Presenter: {publicState?.options.find(o => o.id === selectedMasterPosterId)?.author}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">No selection yet</span>
+                          )}
+                        </div>
                       </div>
 
                       <button
                         type="button"
                         onClick={handleCastVote}
-                        disabled={submittingVote || !selectedPosterId}
+                        disabled={submittingVote || (!selectedPhdPosterId && !selectedMasterPosterId)}
                         className={`w-full py-3 px-5 text-xs font-bold uppercase tracking-wider rounded-xl transition duration-150 flex items-center justify-center gap-2 cursor-pointer ${
-                          selectedPosterId 
+                          (selectedPhdPosterId || selectedMasterPosterId) 
                             ? "bg-[#1E64C8] hover:bg-[#15458c] text-white shadow-md hover:shadow-lg" 
                             : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
                         }`}
@@ -1463,26 +1559,11 @@ export default function App() {
               </div>
 
               {/* Progress bar visualizer */}
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-4 border border-slate-150">
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2 border border-slate-150">
                 <div 
                   className="bg-[#1E64C8] h-2 rounded-full transition-all duration-[1200ms] ease-out" 
                   style={{ width: `${turnoutPercent}%` }}
                 ></div>
-              </div>
-
-              <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
-                {publicState.votersList.map((v) => (
-                  <div key={v.email} className="flex justify-between items-center bg-slate-50 border border-slate-200/50 p-2.5 rounded-lg font-mono text-[11px]">
-                    <span className="text-slate-600 truncate max-w-[170px]">{v.email}</span>
-                    <span className={`inline-flex items-center gap-1 font-sans font-bold text-[9px] rounded px-2 py-0.5 ${
-                      v.hasVoted 
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
-                        : "bg-slate-200 text-slate-400"
-                    }`}>
-                      {v.hasVoted ? "✓ Cast Voted" : "Pending"}
-                    </span>
-                  </div>
-                ))}
               </div>
             </div>
           )}
@@ -1648,81 +1729,172 @@ export default function App() {
                           {(() => {
                             const validOptions = adminState.options.filter(o => typeof o.votes === "number");
                             if (validOptions.length === 0) return null;
-                            const maxVotes = Math.max(...validOptions.map(o => o.votes));
-                            const winners = validOptions.filter(o => o.votes === maxVotes && maxVotes > 0);
 
-                            if (winners.length === 0) {
+                            // 1. PhD winners
+                            const phdOpts = validOptions.filter(o => o.category === "phd_postdoc" || (o.category === undefined && parseInt(o.id) <= 2));
+                            const phdMaxVotes = phdOpts.length > 0 ? Math.max(...phdOpts.map(o => o.votes || 0)) : 0;
+                            const phdWinners = phdOpts.filter(o => (o.votes || 0) === phdMaxVotes && phdMaxVotes > 0);
+
+                            // 2. Master Student winners
+                            const masterOpts = validOptions.filter(o => o.category === "master_student" || (o.category === undefined && parseInt(o.id) > 2));
+                            const masterMaxVotes = masterOpts.length > 0 ? Math.max(...masterOpts.map(o => o.votes || 0)) : 0;
+                            const masterWinners = masterOpts.filter(o => (o.votes || 0) === masterMaxVotes && masterMaxVotes > 0);
+
+                            const noVotesCast = phdMaxVotes === 0 && masterMaxVotes === 0;
+
+                            if (noVotesCast) {
                               return (
                                 <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-800 text-center font-medium">
-                                  No secure ballots have been cast under the currently loaded whitelist system.
+                                  No secure ballots have been cast under the currently loaded whitelist system yet.
                                 </div>
                               );
                             }
 
                             return (
-                              <div className="bg-gradient-to-br from-[#1E64C8] to-[#15458c] text-white p-5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden shadow-sm border border-[#1E64C8]">
-                                <div className="absolute -right-5 -bottom-5 opacity-10 select-none">
-                                  <Trophy className="w-28 h-28 text-white" />
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* PhD Winner Badge */}
+                                <div className="bg-gradient-to-br from-[#1E64C8] to-[#15458c] text-white p-4.5 rounded-xl flex flex-col justify-between gap-3 relative overflow-hidden shadow-sm border border-[#1E64C8]">
+                                  <div className="absolute -right-4 -bottom-4 opacity-10 select-none">
+                                    <Trophy className="w-20 h-20 text-white" />
+                                  </div>
+                                  <div className="z-10">
+                                    <span className="bg-[#FFD200] text-slate-900 text-[8px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded select-none">
+                                      ★ PhD & Postdoc Winner ★
+                                    </span>
+                                    {phdWinners.length > 0 ? (
+                                      <>
+                                        <h4 className="font-display font-extrabold text-sm tracking-tight mt-2 text-[#FFD200]">
+                                          {phdWinners.map(w => `Option ${getDisplayId(w.id)}: "${w.title}"`).join(" & ")}
+                                        </h4>
+                                        <span className="text-[10px] text-slate-200 mt-0.5 block truncate">
+                                          Presenter: {phdWinners.map(w => w.author).join(", ")}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <p className="text-xs text-slate-200 mt-2">No votes cast</p>
+                                    )}
+                                  </div>
+                                  <div className="z-10 bg-white/20 px-3 py-1.5 rounded-lg border border-white/25 self-start text-center">
+                                    <span className="text-[8px] font-mono text-slate-200 uppercase block">Ballots</span>
+                                    <span className="font-mono text-sm font-bold text-[#FFD200]">{phdMaxVotes}</span>
+                                  </div>
                                 </div>
-                                <div className="z-10">
-                                  <span className="bg-[#FFD200] text-slate-900 text-[9px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-full select-none">
-                                    ★ Primary Recipient ★
-                                  </span>
-                                  <h4 className="font-display font-extrabold text-lg tracking-tight mt-2.5 text-[#FFD200]">
-                                    {winners.map(w => `Option ${w.id}: "${w.title}"`).join(" & ")}
-                                  </h4>
-                                  <span className="text-xs text-slate-200 mt-1 block">
-                                    Author presenters: {winners.map(w => w.author).join(", ")}
-                                  </span>
-                                </div>
-                                <div className="z-10 bg-white/20 px-4 py-2.5 rounded-lg border border-white/25 shrink-0 text-center">
-                                  <span className="text-[9px] font-mono text-slate-200 uppercase block">Total Ballots</span>
-                                  <span className="font-mono text-xl font-bold text-[#FFD200]">{maxVotes}</span>
+
+                                {/* Master Winner Badge */}
+                                <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 text-white p-4.5 rounded-xl flex flex-col justify-between gap-3 relative overflow-hidden shadow-sm border border-emerald-800">
+                                  <div className="absolute -right-4 -bottom-4 opacity-10 select-none">
+                                    <Trophy className="w-20 h-20 text-white" />
+                                  </div>
+                                  <div className="z-10">
+                                    <span className="bg-[#FFD200] text-slate-900 text-[8px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded select-none">
+                                      ★ Master Student Winner ★
+                                    </span>
+                                    {masterWinners.length > 0 ? (
+                                      <>
+                                        <h4 className="font-display font-extrabold text-sm tracking-tight mt-2 text-[#FFD200]">
+                                          {masterWinners.map(w => `Option ${getDisplayId(w.id)}: "${w.title}"`).join(" & ")}
+                                        </h4>
+                                        <span className="text-[10px] text-slate-200 mt-0.5 block truncate">
+                                          Presenter: {masterWinners.map(w => w.author).join(", ")}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <p className="text-xs text-slate-200 mt-2">No votes cast</p>
+                                    )}
+                                  </div>
+                                  <div className="z-10 bg-white/20 px-3 py-1.5 rounded-lg border border-white/25 self-start text-center">
+                                    <span className="text-[8px] font-mono text-slate-200 uppercase block">Ballots</span>
+                                    <span className="font-mono text-sm font-bold text-[#FFD200]">{masterMaxVotes}</span>
+                                  </div>
                                 </div>
                               </div>
                             );
                           })()}
 
                           {/* Certified Bar Tally Display */}
-                          <div className="border border-slate-200 rounded-xl p-5 flex flex-col gap-4">
-                            <h4 className="text-xs font-mono font-extrabold text-slate-400 uppercase tracking-wider">
-                              OFFICIAL BALLOT RECIPIENT GRAPH CHART
+                          <div className="border border-slate-200 rounded-xl p-5 flex flex-col gap-5">
+                            <h4 className="text-xs font-mono font-extrabold text-slate-450 uppercase tracking-wide">
+                              OFFICIAL BALLOT RECIPIENT GRAPH CHARTS
                             </h4>
 
-                            <div className="flex flex-col gap-4">
-                              {(() => {
-                                const totalCast = adminState.votes.length;
-                                const maxVotesVal = Math.max(...adminState.options.map(o => o.votes), 1);
-                                
-                                return adminState.options.map((opt) => {
-                                  const votes = opt.votes || 0;
-                                  const pctVal = totalCast > 0 ? Math.round((votes / totalCast) * 100) : 0;
-                                  const barWidthPct = Math.max((votes / maxVotesVal) * 100, 3);
+                            <div className="flex flex-col gap-6">
+                              {/* PHD CATEGORY GRAPH */}
+                              <div className="border-b border-slate-100 pb-4">
+                                <span className="text-[10px] uppercase font-bold text-slate-500 font-mono block mb-2.5">
+                                  Category A: PhD & Postdoc Tallies
+                                </span>
+                                <div className="flex flex-col gap-3">
+                                  {(() => {
+                                    const phdOpts = adminState.options.filter(o => o.category === "phd_postdoc" || (o.category === undefined && parseInt(o.id) <= 2));
+                                    const phdVotesTotal = adminState.votes.filter(v => phdOpts.some(o => o.id === v.optionId)).length;
+                                    const maxPhdVotesVal = Math.max(...phdOpts.map(o => o.votes), 1);
 
-                                  return (
-                                    <div key={opt.id} className="text-xs flex flex-col gap-1.5">
-                                      <div className="flex justify-between font-bold text-slate-700">
-                                        <span className="flex items-center gap-1.5">
-                                          <span className="h-5 w-5 bg-slate-100 text-slate-600 font-mono font-bold flex items-center justify-center rounded">
-                                            {opt.id}
-                                          </span>
-                                          <span className="truncate max-w-[250px] sm:max-w-md">{opt.title} ({opt.author})</span>
-                                        </span>
-                                        <span className="font-mono text-slate-500">
-                                          <strong>{votes} votes</strong> ({pctVal}%)
-                                        </span>
-                                      </div>
-                                      
-                                      <div className="w-full bg-slate-100 border border-slate-200/50 rounded-lg h-5 overflow-hidden flex relative">
-                                        <div 
-                                          className="bg-[#1E64C8] h-full rounded-l transition-all duration-[1000ms]"
-                                          style={{ width: `${barWidthPct}%` }}
-                                        ></div>
-                                      </div>
-                                    </div>
-                                  );
-                                });
-                              })()}
+                                    return phdOpts.map((opt) => {
+                                      const votes = opt.votes || 0;
+                                      const pctVal = phdVotesTotal > 0 ? Math.round((votes / phdVotesTotal) * 100) : 0;
+                                      const barWidthPct = Math.max((votes / maxPhdVotesVal) * 100, 3);
+
+                                      return (
+                                        <div key={opt.id} className="text-xs flex flex-col gap-1">
+                                          <div className="flex justify-between font-medium text-slate-700">
+                                            <span className="truncate max-w-[250px]">
+                                              Option {getDisplayId(opt.id)}: {opt.title} ({opt.author})
+                                            </span>
+                                            <span className="font-mono text-slate-500 font-bold shrink-0">
+                                              {votes} votes ({pctVal}%)
+                                            </span>
+                                          </div>
+                                          <div className="w-full bg-slate-100 rounded h-3 overflow-hidden">
+                                            <div 
+                                              className="bg-[#1E64C8] h-full rounded transition-all duration-[800ms]"
+                                              style={{ width: `${barWidthPct}%` }}
+                                            ></div>
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              </div>
+
+                              {/* MASTER CATEGORY GRAPH */}
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-emerald-700 font-mono block mb-2.5">
+                                  Category B: Master Student Tallies
+                                </span>
+                                <div className="flex flex-col gap-3">
+                                  {(() => {
+                                    const masterOpts = adminState.options.filter(o => o.category === "master_student" || (o.category === undefined && parseInt(o.id) > 2));
+                                    const masterVotesTotal = adminState.votes.filter(v => masterOpts.some(o => o.id === v.optionId)).length;
+                                    const maxMasterVotesVal = Math.max(...masterOpts.map(o => o.votes), 1);
+
+                                    return masterOpts.map((opt) => {
+                                      const votes = opt.votes || 0;
+                                      const pctVal = masterVotesTotal > 0 ? Math.round((votes / masterVotesTotal) * 100) : 0;
+                                      const barWidthPct = Math.max((votes / maxMasterVotesVal) * 100, 3);
+
+                                      return (
+                                        <div key={opt.id} className="text-xs flex flex-col gap-1">
+                                          <div className="flex justify-between font-medium text-slate-700">
+                                            <span className="truncate max-w-[250px]">
+                                              Option {getDisplayId(opt.id)}: {opt.title} ({opt.author})
+                                            </span>
+                                            <span className="font-mono text-emerald-700 font-bold shrink-0">
+                                              {votes} votes ({pctVal}%)
+                                            </span>
+                                          </div>
+                                          <div className="w-full bg-slate-100 rounded h-3 overflow-hidden">
+                                            <div 
+                                              className="bg-emerald-600 h-full rounded transition-all duration-[800ms]"
+                                              style={{ width: `${barWidthPct}%` }}
+                                            ></div>
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              </div>
                             </div>
                           </div>
 
@@ -1745,7 +1917,7 @@ export default function App() {
                                     <div className="flex gap-4 shrink-0 text-slate-500">
                                       <div>
                                         <span className="text-slate-400">Ballot choice:</span>{" "}
-                                        <span className="text-[#1E64C8] font-black uppercase">Option {vote.optionId}</span>
+                                        <span className="text-[#1E64C8] font-black uppercase">Option {getDisplayId(vote.optionId)}</span>
                                       </div>
                                       <div className="text-[10px] text-slate-400 pt-0.5">{new Date(vote.timestamp).toLocaleTimeString()}</div>
                                     </div>
@@ -1764,7 +1936,7 @@ export default function App() {
                           <div className="bg-[#1E64C8]/5 border border-[#1E64C8]/10 p-4 rounded-xl flex items-start gap-3">
                             <Info className="w-4 h-4 text-[#1E64C8] shrink-0 mt-0.5" />
                             <div className="text-xs text-slate-600 leading-normal">
-                              To introduce additional voters, register their official emails inside the field below (one email address per line). Removing lines and saving will automatically purge their registered credential indexes and keys from the voter database to protect platform integrity.
+                              To introduce additional voters, register their official emails inside the field below (one email address per line). Saving will automatically update the authorized email list for the Poster Prize.
                             </div>
                           </div>
 
@@ -1780,7 +1952,7 @@ export default function App() {
                               className="w-full bg-white border border-slate-300 rounded-lg p-3 font-mono text-xs focus:ring-1 focus:ring-[#1E64C8] focus:border-[#1E64C8] focus:outline-none"
                             />
                             <span className="text-[10px] text-slate-400 leading-normal">
-                              Voters listed here can immediately establish their passcode setup on their first portal session to participate in the Poster Prize.
+                              Voters listed here can immediately sign in and vote using their email address.
                             </span>
                           </div>
 
@@ -1794,9 +1966,6 @@ export default function App() {
                                 <div key={voter.email} className="px-4 py-3 text-xs flex justify-between items-center bg-white">
                                   <div>
                                     <span className="font-mono text-slate-700 font-semibold">{voter.email}</span>
-                                    <span className="block text-[10px] text-slate-400 font-mono mt-0.5">
-                                      Passcode: {voter.pin ? `Registered PIN: [ ${voter.pin} ]` : "[ NOT REGISTERED YET ]"}
-                                    </span>
                                   </div>
                                   <div className="flex items-center gap-2.5 shrink-0">
                                     <span className={`inline-flex items-center gap-1 font-bold text-[9px] px-2 py-0.5 rounded uppercase ${
@@ -1844,19 +2013,35 @@ export default function App() {
                                     />
                                   </div>
                                   <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Academic Author / Presenter</label>
-                                    <input
-                                      type="text"
-                                      value={opt.author}
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Prize Category Type</label>
+                                    <select
+                                      value={opt.category || "phd_postdoc"}
                                       onChange={(e) => {
                                         const buffer = [...editOptions];
-                                        buffer[idx].author = e.target.value;
+                                        buffer[idx].category = e.target.value;
                                         setEditOptions(buffer);
                                       }}
-                                      className="bg-white border border-slate-300 p-2 rounded-lg text-xs text-slate-700"
-                                      placeholder="Presenter Name/Department..."
-                                    />
+                                      className="bg-white border border-[#1E64C8] p-2 rounded-lg text-xs text-[#1E64C8] font-bold"
+                                    >
+                                      <option value="phd_postdoc">PhD & Postdoc Poster Prize</option>
+                                      <option value="master_student">Master Student Poster Prize</option>
+                                    </select>
                                   </div>
+                                </div>
+
+                                <div className="flex flex-col gap-1 mt-1">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Academic Author / Presenter</label>
+                                  <input
+                                    type="text"
+                                    value={opt.author}
+                                    onChange={(e) => {
+                                      const buffer = [...editOptions];
+                                      buffer[idx].author = e.target.value;
+                                      setEditOptions(buffer);
+                                    }}
+                                    className="bg-white border border-slate-300 p-2 rounded-lg text-xs text-slate-700"
+                                    placeholder="Presenter Name/Department..."
+                                  />
                                 </div>
                                 <div className="flex flex-col gap-1 mt-1">
                                   <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Presentation Abstract</label>
