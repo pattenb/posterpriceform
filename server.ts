@@ -2,6 +2,33 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore, Firestore } from "firebase-admin/firestore";
+
+// Initialize Firebase Admin globally
+const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
+let firestoreDb: Firestore | null = null;
+
+if (fs.existsSync(firebaseConfigPath)) {
+  try {
+    const config = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
+    let app;
+    if (getApps().length === 0) {
+      app = initializeApp({
+        projectId: config.projectId
+      });
+    } else {
+      app = getApps()[0];
+    }
+    const dbId = config.firestoreDatabaseId || "ai-studio-73c85276-581b-461e-940f-7ea37f7600b9";
+    firestoreDb = getFirestore(app, dbId);
+    console.log(`Firebase Admin initialized successfully with database ID: ${dbId}`);
+  } catch (error) {
+    console.error("Failed to initialize Firebase Admin, utilizing local database fallback:", error);
+  }
+} else {
+  console.warn("firebase-applet-config.json not found, utilizing local database.");
+}
 
 // Define DB Types
 interface Voter {
@@ -225,7 +252,23 @@ const DEFAULT_DB: DbSchema = {
 };
 
 // Helper to Read DB
-function readDb(): DbSchema {
+async function readDb(): Promise<DbSchema> {
+  if (firestoreDb) {
+    try {
+      const docRef = firestoreDb.collection("app").doc("state");
+      const doc = await docRef.get();
+      if (doc.exists) {
+        return doc.data() as DbSchema;
+      } else {
+        console.log("No database state document in Firestore. Bootstrapping with DEFAULT_DB...");
+        await docRef.set(DEFAULT_DB);
+        return DEFAULT_DB;
+      }
+    } catch (error) {
+      console.error("Error reading database state from Firestore, falling back to local storage:", error);
+    }
+  }
+
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, "utf-8");
@@ -238,7 +281,16 @@ function readDb(): DbSchema {
 }
 
 // Helper to Write DB
-function writeDb(data: DbSchema) {
+async function writeDb(data: DbSchema): Promise<void> {
+  if (firestoreDb) {
+    try {
+      const docRef = firestoreDb.collection("app").doc("state");
+      await docRef.set(data);
+    } catch (error) {
+      console.error("Error writing database state to Firestore:", error);
+    }
+  }
+
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (error) {
@@ -246,12 +298,11 @@ function writeDb(data: DbSchema) {
   }
 }
 
-// Ensure database file exists on startup
-if (!fs.existsSync(DB_FILE)) {
-  writeDb(DEFAULT_DB);
-}
-
 async function startServer() {
+  // Bootstrap global database state (async)
+  const initialDb = await readDb();
+  await writeDb(initialDb);
+
   const app = express();
   const PORT = 3000;
 
@@ -260,8 +311,8 @@ async function startServer() {
   // ==================== API ROUTES ====================
 
   // Public state: get list of options (with votes hidden if not concluded) and end status
-  app.get("/api/state", (req, res) => {
-    const db = readDb();
+  app.get("/api/state", async (req, res) => {
+    const db = await readDb();
     
     // Check if time has concluded voting automatically
     let concluded = db.settings.votingConcluded;
@@ -270,7 +321,7 @@ async function startServer() {
       const now = new Date().getTime();
       if (now >= endTime && !db.settings.votingConcluded) {
         db.settings.votingConcluded = true;
-        writeDb(db);
+        await writeDb(db);
         concluded = true;
       }
     }
@@ -291,40 +342,55 @@ async function startServer() {
   });
 
   // Check email status
-  app.post("/api/check-email", (req, res) => {
+  app.post("/api/check-email", async (req, res) => {
     const { email } = req.body;
     if (!email || typeof email !== "string") {
       res.status(400).json({ error: "Email is required" });
       return;
     }
 
-    const db = readDb();
+    const db = await readDb();
     const normalizedEmail = email.trim().toLowerCase();
     const voter = db.voters.find(v => v.email.toLowerCase() === normalizedEmail);
 
     if (!voter) {
       res.json({
         isWhitelisted: false,
-        hasVoted: false
+        hasVoted: false,
+        votedCategories: {
+          phd_postdoc: false,
+          master_student: false
+        },
+        votedOptionIds: []
       });
       return;
     }
 
+    const userVotes = db.votes.filter(v => v.voterEmail.toLowerCase() === normalizedEmail);
+    const votedPhd = userVotes.some(v => v.category === "phd_postdoc");
+    const votedMaster = userVotes.some(v => v.category === "master_student");
+    const hasVotedAll = votedPhd && votedMaster;
+
     res.json({
       isWhitelisted: true,
-      hasVoted: voter.hasVoted
+      hasVoted: hasVotedAll,
+      votedCategories: {
+        phd_postdoc: votedPhd,
+        master_student: votedMaster
+      },
+      votedOptionIds: userVotes.map(v => v.optionId)
     });
   });
 
   // Cast vote
-  app.post("/api/vote", (req, res) => {
+  app.post("/api/vote", async (req, res) => {
     const { email, phdPosterId, masterPosterId, optionId } = req.body;
     if (!email) {
       res.status(400).json({ error: "Email is required" });
       return;
     }
 
-    const db = readDb();
+    const db = await readDb();
     
     // Check if voting is concluded first
     let concluded = db.settings.votingConcluded;
@@ -333,7 +399,7 @@ async function startServer() {
       const now = new Date().getTime();
       if (now >= endTime) {
         db.settings.votingConcluded = true;
-        writeDb(db);
+        await writeDb(db);
         concluded = true;
       }
     }
@@ -351,16 +417,18 @@ async function startServer() {
       return;
     }
 
-    const voter = db.voters[voterIndex];
+    const userVotes = db.votes.filter(v => v.voterEmail.toLowerCase() === normalizedEmail);
+    const votedPhd = userVotes.some(v => v.category === "phd_postdoc");
+    const votedMaster = userVotes.some(v => v.category === "master_student");
 
-    if (voter.hasVoted) {
-      res.status(400).json({ error: "You have already cast your ballot!" });
+    if (votedPhd && votedMaster) {
+      res.status(400).json({ error: "You have already cast ballots for both categories!" });
       return;
     }
 
     // Determine the selections
     const selections: string[] = [];
-    if (phdPosterId) {
+    if (phdPosterId && !votedPhd) {
       const exists = db.options.some(o => o.id === phdPosterId);
       if (!exists) {
         res.status(400).json({ error: "Selected PhD/Postdoc option is invalid" });
@@ -368,7 +436,7 @@ async function startServer() {
       }
       selections.push(phdPosterId);
     }
-    if (masterPosterId) {
+    if (masterPosterId && !votedMaster) {
       const exists = db.options.some(o => o.id === masterPosterId);
       if (!exists) {
         res.status(400).json({ error: "Selected Master Student option is invalid" });
@@ -379,16 +447,21 @@ async function startServer() {
 
     // If they used a legacy API route or direct single submission
     if (selections.length === 0 && optionId) {
-      const exists = db.options.some(o => o.id === optionId);
-      if (!exists) {
+      const opt = db.options.find(o => o.id === optionId);
+      if (!opt) {
         res.status(400).json({ error: "Invalid poster option selected." });
+        return;
+      }
+      const alreadyVotedCat = userVotes.some(v => v.category === opt.category);
+      if (alreadyVotedCat) {
+        res.status(400).json({ error: "You have already cast a ballot for this category!" });
         return;
       }
       selections.push(optionId);
     }
 
     if (selections.length === 0) {
-      res.status(400).json({ error: "Please select at least one poster before submitting!" });
+      res.status(400).json({ error: "You have already voted for the selected category or made no selection!" });
       return;
     }
 
@@ -403,17 +476,26 @@ async function startServer() {
       });
     }
 
-    db.voters[voterIndex].hasVoted = true;
+    // Re-evaluate if voter has now voted in both categories
+    const allVotesAfter = db.votes.filter(v => v.voterEmail.toLowerCase() === normalizedEmail);
+    const hasPhdAfter = allVotesAfter.some(v => v.category === "phd_postdoc");
+    const hasMasterAfter = allVotesAfter.some(v => v.category === "master_student");
+
+    db.voters[voterIndex].hasVoted = hasPhdAfter && hasMasterAfter;
     db.voters[voterIndex].votedAt = timestamp;
 
-    writeDb(db);
-    res.json({ success: true, message: "Vote cast successfully!" });
+    await writeDb(db);
+    res.json({ 
+      success: true, 
+      message: "Vote cast successfully!", 
+      isComplete: hasPhdAfter && hasMasterAfter 
+    });
   });
 
   // Admin login check
-  app.post("/api/admin/login", (req, res) => {
+  app.post("/api/admin/login", async (req, res) => {
     const { adminPin } = req.body;
-    const db = readDb();
+    const db = await readDb();
     if (adminPin === db.settings.adminPin) {
       res.json({ success: true });
     } else {
@@ -422,9 +504,9 @@ async function startServer() {
   });
 
   // Admin: Get Full State (including raw votes with counts)
-  app.post("/api/admin/state", (req, res) => {
+  app.post("/api/admin/state", async (req, res) => {
     const { adminPin } = req.body;
-    const db = readDb();
+    const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
       res.status(401).json({ error: "Access Denied" });
       return;
@@ -444,9 +526,9 @@ async function startServer() {
   });
 
   // Admin: Update settings
-  app.post("/api/admin/update-settings", (req, res) => {
+  app.post("/api/admin/update-settings", async (req, res) => {
     const { adminPin, votingConcluded, votingEndTime, newAdminPin } = req.body;
-    const db = readDb();
+    const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
       res.status(401).json({ error: "Access Denied" });
       return;
@@ -458,14 +540,14 @@ async function startServer() {
       db.settings.adminPin = newAdminPin.trim();
     }
 
-    writeDb(db);
+    await writeDb(db);
     res.json({ success: true, settings: db.settings });
   });
 
   // Admin: Update Whitelist
-  app.post("/api/admin/update-whitelist", (req, res) => {
+  app.post("/api/admin/update-whitelist", async (req, res) => {
     const { adminPin, emails } = req.body;
-    const db = readDb();
+    const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
       res.status(401).json({ error: "Access Denied" });
       return;
@@ -494,14 +576,14 @@ async function startServer() {
     // Purge votes from voters no longer in whitelist to keep integrity
     db.votes = db.votes.filter(v => cleanEmails.includes(v.voterEmail));
 
-    writeDb(db);
+    await writeDb(db);
     res.json({ success: true, voters: db.voters });
   });
 
   // Admin: Update Posters Details (options)
-  app.post("/api/admin/update-options", (req, res) => {
+  app.post("/api/admin/update-options", async (req, res) => {
     const { adminPin, options } = req.body;
-    const db = readDb();
+    const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
       res.status(401).json({ error: "Access Denied" });
       return;
@@ -520,14 +602,14 @@ async function startServer() {
       abstract: String(opt.abstract || "")
     }));
 
-    writeDb(db);
+    await writeDb(db);
     res.json({ success: true, options: db.options });
   });
 
   // Admin: Reset Votes and PINs
-  app.post("/api/admin/reset", (req, res) => {
+  app.post("/api/admin/reset", async (req, res) => {
     const { adminPin } = req.body;
-    const db = readDb();
+    const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
       res.status(401).json({ error: "Access Denied" });
       return;
@@ -543,7 +625,7 @@ async function startServer() {
     db.settings.votingConcluded = false;
     db.settings.votingEndTime = null;
 
-    writeDb(db);
+    await writeDb(db);
     res.json({ success: true });
   });
 

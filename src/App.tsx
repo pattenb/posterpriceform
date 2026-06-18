@@ -33,7 +33,6 @@ interface PublicState {
     category?: "phd_postdoc" | "master_student";
     title: string;
     author: string;
-    abstract: string;
     votes: number | null; // Always null for voters in public route
   }>;
   totalVotersCount: number;
@@ -62,7 +61,6 @@ interface AdminState {
     category?: "phd_postdoc" | "master_student";
     title: string;
     author: string;
-    abstract: string;
     votes: number; // Disclosed ONLY to admins
   }>;
   votes: Array<{
@@ -353,13 +351,28 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
     if (!voter) {
       return respond({
         isWhitelisted: false,
-        hasVoted: false
+        hasVoted: false,
+        votedCategories: {
+          phd_postdoc: false,
+          master_student: false
+        },
+        votedOptionIds: []
       });
     }
 
+    const userVotes = db.votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
+    const votedPhd = userVotes.some((v: any) => v.category === "phd_postdoc");
+    const votedMaster = userVotes.some((v: any) => v.category === "master_student");
+    const hasVotedAll = votedPhd && votedMaster;
+
     return respond({
       isWhitelisted: true,
-      hasVoted: voter.hasVoted
+      hasVoted: hasVotedAll,
+      votedCategories: {
+        phd_postdoc: votedPhd,
+        master_student: votedMaster
+      },
+      votedOptionIds: userVotes.map((v: any) => v.optionId)
     });
   }
 
@@ -388,21 +401,23 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
       return respond({ error: "Email not whitelisted" }, 403);
     }
 
-    const voter = db.voters[voterIndex];
+    const userVotes = db.votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
+    const votedPhd = userVotes.some((v: any) => v.category === "phd_postdoc");
+    const votedMaster = userVotes.some((v: any) => v.category === "master_student");
 
-    if (voter.hasVoted) {
-      return respond({ error: "You have already cast your ballot!" }, 400);
+    if (votedPhd && votedMaster) {
+      return respond({ error: "You have already cast ballots for both categories!" }, 400);
     }
 
     const selections: string[] = [];
-    if (body.phdPosterId) {
+    if (body.phdPosterId && !votedPhd) {
       const exists = db.options.some((o: any) => String(o.id) === String(body.phdPosterId));
       if (!exists) {
         return respond({ error: "Selected PhD/Postdoc option is invalid" }, 400);
       }
       selections.push(String(body.phdPosterId));
     }
-    if (body.masterPosterId) {
+    if (body.masterPosterId && !votedMaster) {
       const exists = db.options.some((o: any) => String(o.id) === String(body.masterPosterId));
       if (!exists) {
         return respond({ error: "Selected Master Student option is invalid" }, 400);
@@ -410,16 +425,20 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
       selections.push(String(body.masterPosterId));
     }
 
-    if (selections.length === 0 && optionId) {
-      const exists = db.options.some((o: any) => String(o.id) === optionId);
-      if (!exists) {
+    if (selections.length === 0 && optionId && optionId !== "undefined") {
+      const opt = db.options.find((o: any) => String(o.id) === optionId);
+      if (!opt) {
         return respond({ error: "Invalid poster option" }, 400);
+      }
+      const alreadyVotedCat = userVotes.some((v: any) => v.category === opt.category);
+      if (alreadyVotedCat) {
+        return respond({ error: "You have already cast a ballot for this category!" }, 400);
       }
       selections.push(optionId);
     }
 
     if (selections.length === 0) {
-      return respond({ error: "Please select at least one poster before submitting!" }, 400);
+      return respond({ error: "You have already voted for the selected category or made no selection!" }, 400);
     }
 
     const timestamp = new Date().toISOString();
@@ -433,11 +452,19 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
       });
     }
 
-    db.voters[voterIndex].hasVoted = true;
+    const allVotesAfter = db.votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
+    const hasPhdAfter = allVotesAfter.some((v: any) => v.category === "phd_postdoc");
+    const hasMasterAfter = allVotesAfter.some((v: any) => v.category === "master_student");
+
+    db.voters[voterIndex].hasVoted = hasPhdAfter && hasMasterAfter;
     db.voters[voterIndex].votedAt = timestamp;
 
     saveLocalDb(db);
-    return respond({ success: true, message: "Vote cast successfully!" });
+    return respond({ 
+      success: true, 
+      message: "Vote cast successfully!", 
+      isComplete: hasPhdAfter && hasMasterAfter 
+    });
   }
 
   // admin login
@@ -529,8 +556,7 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
     db.options = options.map((opt: any) => ({
       id: String(opt.id),
       title: String(opt.title || `Poster ${opt.id}`),
-      author: String(opt.author || `Presenter ${opt.id}`),
-      abstract: String(opt.abstract || "")
+      author: String(opt.author || `Presenter ${opt.id}`)
     }));
 
     saveLocalDb(db);
@@ -604,6 +630,11 @@ export default function App() {
   const [selectedPhdPosterId, setSelectedPhdPosterId] = useState<string | null>(null);
   const [selectedMasterPosterId, setSelectedMasterPosterId] = useState<string | null>(null);
   const [submittingVote, setSubmittingVote] = useState(false);
+  const [votedCategories, setVotedCategories] = useState<{ phd_postdoc: boolean; master_student: boolean }>({
+    phd_postdoc: false,
+    master_student: false
+  });
+  const [alreadyVotedOptionIds, setAlreadyVotedOptionIds] = useState<string[]>([]);
 
   // --- Admin Modal State ---
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -692,6 +723,8 @@ export default function App() {
       .then(data => {
         if (data.isWhitelisted) {
           setTempVoterEmail(savedEmail);
+          setVotedCategories(data.votedCategories || { phd_postdoc: false, master_student: false });
+          setAlreadyVotedOptionIds(data.votedOptionIds || []);
           if (data.hasVoted) {
             setVoterStep("thank-you");
           } else {
@@ -702,6 +735,17 @@ export default function App() {
       .catch((e) => console.error("Error restoring session:", e));
     }
   }, []);
+
+  // Sync selected choices when public options and cast votes details load
+  useEffect(() => {
+    if (publicState?.options && alreadyVotedOptionIds.length > 0) {
+      const phdOpt = publicState.options.find(o => alreadyVotedOptionIds.includes(o.id) && (o.category === "phd_postdoc" || (o.category === undefined && parseInt(o.id) <= 2)));
+      if (phdOpt) setSelectedPhdPosterId(phdOpt.id);
+      
+      const masterOpt = publicState.options.find(o => alreadyVotedOptionIds.includes(o.id) && (o.category === "master_student" || (o.category === undefined && parseInt(o.id) > 2)));
+      if (masterOpt) setSelectedMasterPosterId(masterOpt.id);
+    }
+  }, [publicState, alreadyVotedOptionIds]);
 
   // Voter check email
   const handleCheckEmail = async (e: React.FormEvent) => {
@@ -737,6 +781,8 @@ export default function App() {
 
       setTempVoterEmail(email);
       localStorage.setItem("voter_email", email);
+      setVotedCategories(data.votedCategories || { phd_postdoc: false, master_student: false });
+      setAlreadyVotedOptionIds(data.votedOptionIds || []);
 
       if (data.hasVoted) {
         setVoterStep("thank-you");
@@ -752,7 +798,10 @@ export default function App() {
 
   // Cast vote
   const handleCastVote = async () => {
-    if (!selectedPhdPosterId && !selectedMasterPosterId) {
+    const needPhdChoice = !votedCategories.phd_postdoc;
+    const needMasterChoice = !votedCategories.master_student;
+
+    if (needPhdChoice && !selectedPhdPosterId && needMasterChoice && !selectedMasterPosterId) {
       alert("Please select at least one poster option before submitting your ballot!");
       return;
     }
@@ -764,8 +813,8 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: tempVoterEmail,
-          phdPosterId: selectedPhdPosterId,
-          masterPosterId: selectedMasterPosterId
+          phdPosterId: needPhdChoice ? selectedPhdPosterId : null,
+          masterPosterId: needMasterChoice ? selectedMasterPosterId : null
         })
       });
 
@@ -774,7 +823,28 @@ export default function App() {
         throw new Error(data.error || "Failed to submit ballot");
       }
 
-      setVoterStep("thank-you");
+      // Re-fetch email status to get updated voted states!
+      const checkRes = await fetch("/api/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: tempVoterEmail })
+      });
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        setVotedCategories(checkData.votedCategories || { phd_postdoc: false, master_student: false });
+        setAlreadyVotedOptionIds(checkData.votedOptionIds || []);
+        if (checkData.hasVoted) {
+          setVoterStep("thank-you");
+        } else {
+          setVoterMessage({ text: "Your vote has been registered dynamically! Please complete the other category choice below.", type: "success" });
+        }
+      } else {
+        if (data.isComplete) {
+          setVoterStep("thank-you");
+        } else {
+          setVoterStep("thank-you");
+        }
+      }
       fetchPublicState();
     } catch (err: any) {
       alert(err.message || "An exception occurred while submitting your choice");
@@ -791,6 +861,8 @@ export default function App() {
     setSelectedPhdPosterId(null);
     setSelectedMasterPosterId(null);
     setVoterMessage(null);
+    setVotedCategories({ phd_postdoc: false, master_student: false });
+    setAlreadyVotedOptionIds([]);
     setVoterStep("enter-email");
   };
 
@@ -1056,7 +1128,7 @@ export default function App() {
               Ghent University Academic Posters
             </h2>
             <p className="text-xs text-slate-500 leading-relaxed mb-4">
-              To casting your vote, please review the academic poster options below. Click any card to expand its theoretical abstract. Enter your credentials on the right board to sign in and register your secure prize vote choice.
+              To cast your vote, please review the academic poster options below. Enter your credentials on the right board to sign in and register your secure prize vote choice.
             </p>
 
             {loading ? (
@@ -1083,26 +1155,25 @@ export default function App() {
                     {(publicState?.options || [])
                       .filter(o => o.category === "phd_postdoc" || (o.category === undefined && parseInt(o.id) <= 2))
                       .map((poster) => {
-                        const isExpanded = expandedPosterId === poster.id;
                         const isSelectableToVote = voterStep === "voting" && !publicState?.votingConcluded;
                         const isBallotChoice = selectedPhdPosterId === poster.id;
+                        const isLocked = votedCategories.phd_postdoc;
 
                         return (
                           <div 
                             key={poster.id}
+                            onClick={() => {
+                              if (isSelectableToVote && !isLocked) {
+                                setSelectedPhdPosterId(isBallotChoice ? null : poster.id);
+                              }
+                            }}
                             className={`border rounded-xl transition-all overflow-hidden ${
                               isBallotChoice 
-                                ? "border-[#1E64C8] ring-1 ring-[#1E64C8]/30 shadow-sm" 
-                                : "border-slate-200 hover:border-slate-300"
-                            }`}
+                                ? "border-[#1E64C8] ring-1 ring-[#1E64C8]/30 shadow-sm bg-slate-50/30" 
+                                : "border-slate-200"
+                            } ${isSelectableToVote && !isLocked ? "cursor-pointer hover:border-[#1E64C8]/50 hover:bg-slate-50/70" : ""}`}
                           >
-                            <button
-                              type="button"
-                              onClick={() => setExpandedPosterId(isExpanded ? null : poster.id)}
-                              className={`w-full text-left p-4 flex items-start justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors ${
-                                isExpanded ? "bg-slate-50/50" : ""
-                              }`}
-                            >
+                            <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                               <div className="flex gap-3">
                                 <span className={`h-7 w-7 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 ${
                                   isBallotChoice 
@@ -1124,55 +1195,31 @@ export default function App() {
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-2 shrink-0 self-center">
-                                {isBallotChoice && (
-                                  <span className="text-[10px] font-mono font-bold uppercase bg-emerald-600 text-white rounded px-2.5 py-0.5 flex items-center gap-1 shrink-0 shadow-sm">
-                                    <Check className="w-3 h-3 stroke-[3]" /> Selected
-                                  </span>
-                                )}
-                                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                              </div>
-                            </button>
-
-                            <AnimatePresence>
-                              {isExpanded && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="bg-white border-t border-slate-150"
-                                >
-                                  <div className="p-4 sm:p-5 flex flex-col gap-4">
-                                    <div className="bg-[#1E64C8]/5 p-4 rounded-lg border border-[#1E64C8]/10">
-                                      <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                        <FileText className="w-3.5 h-3.5 text-[#1E64C8]" />
-                                        Abstract details
-                                      </h4>
-                                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans whitespace-pre-line">
-                                        {poster.abstract || "Detailed content abstracts scheduled by academic presenter will appear here."}
-                                      </p>
-                                    </div>
-
-                                    {isSelectableToVote && (
-                                      <div className="flex justify-end pt-2 border-t border-slate-100">
-                                        <button
-                                          type="button"
-                                          onClick={() => setSelectedPhdPosterId(isBallotChoice ? null : poster.id)}
-                                          className={`text-xs font-bold py-2 px-4 rounded-lg transition flex items-center gap-1.5 cursor-pointer hover:shadow-sm ${
-                                            isBallotChoice 
-                                              ? "bg-amber-500 border border-amber-600 text-white hover:bg-amber-650" 
-                                              : "bg-[#1E64C8] border border-[#1E64C8] text-white hover:bg-[#15458c]"
-                                          }`}
-                                        >
-                                          <Check className="w-3.5 h-3.5" />
-                                          <span>{isBallotChoice ? "Deselect this Poster" : "Select Option " + getDisplayId(poster.id) + " as my PhD/Postdoc Choice"}</span>
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </motion.div>
+                              {/* Selection status or select button */}
+                              {isSelectableToVote && (
+                                <div className="shrink-0 sm:self-center flex justify-end">
+                                  <button
+                                    type="button"
+                                    disabled={isLocked}
+                                    className={`text-xs font-bold py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 ${
+                                      isLocked
+                                        ? "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed"
+                                        : isBallotChoice 
+                                          ? "bg-amber-500 border border-amber-600 text-white hover:bg-amber-600 animate-pulse" 
+                                          : "bg-[#1E64C8]/10 text-[#1E64C8] border border-[#1E64C8]/20 hover:bg-[#1E64C8] hover:text-white"
+                                    }`}
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>
+                                      {isLocked
+                                        ? "Locked"
+                                        : isBallotChoice ? "Selected" : "Select Poster"
+                                      }
+                                    </span>
+                                  </button>
+                                </div>
                               )}
-                            </AnimatePresence>
+                            </div>
                           </div>
                         );
                       })}
@@ -1191,26 +1238,25 @@ export default function App() {
                     {(publicState?.options || [])
                       .filter(o => o.category === "master_student" || (o.category === undefined && parseInt(o.id) > 2))
                       .map((poster) => {
-                        const isExpanded = expandedPosterId === poster.id;
                         const isSelectableToVote = voterStep === "voting" && !publicState?.votingConcluded;
                         const isBallotChoice = selectedMasterPosterId === poster.id;
+                        const isLocked = votedCategories.master_student;
 
                         return (
                           <div 
                             key={poster.id}
+                            onClick={() => {
+                              if (isSelectableToVote && !isLocked) {
+                                setSelectedMasterPosterId(isBallotChoice ? null : poster.id);
+                              }
+                            }}
                             className={`border rounded-xl transition-all overflow-hidden ${
                               isBallotChoice 
-                                ? "border-emerald-600 ring-1 ring-emerald-600/30 shadow-sm" 
-                                : "border-slate-200 hover:border-slate-300"
-                            }`}
+                                ? "border-emerald-600 ring-1 ring-emerald-600/30 shadow-sm bg-slate-50/30" 
+                                : "border-slate-200"
+                            } ${isSelectableToVote && !isLocked ? "cursor-pointer hover:border-emerald-600/50 hover:bg-slate-50/70" : ""}`}
                           >
-                            <button
-                              type="button"
-                              onClick={() => setExpandedPosterId(isExpanded ? null : poster.id)}
-                              className={`w-full text-left p-4 flex items-start justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors ${
-                                isExpanded ? "bg-slate-50/50" : ""
-                              }`}
-                            >
+                            <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                               <div className="flex gap-3">
                                 <span className={`h-7 w-7 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 ${
                                   isBallotChoice 
@@ -1226,61 +1272,37 @@ export default function App() {
                                   <h3 className="font-display font-extrabold text-sm sm:text-base text-slate-800 leading-tight mt-0.5">
                                     {poster.title}
                                   </h3>
-                                  <span className="text-xs font-medium text-[#1E64C8] mt-1 inline-block">
+                                  <span className="text-xs font-medium text-emerald-700 mt-1 inline-block">
                                     Presenter: {poster.author}
                                   </span>
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-2 shrink-0 self-center">
-                                {isBallotChoice && (
-                                  <span className="text-[10px] font-mono font-bold uppercase bg-emerald-600 text-white rounded px-2.5 py-0.5 flex items-center gap-1 shrink-0 shadow-sm">
-                                    <Check className="w-3 h-3 stroke-[3]" /> Selected
-                                  </span>
-                                )}
-                                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                              </div>
-                            </button>
-
-                            <AnimatePresence>
-                              {isExpanded && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="bg-white border-t border-slate-150"
-                                >
-                                  <div className="p-4 sm:p-5 flex flex-col gap-4">
-                                    <div className="bg-[#1E64C8]/5 p-4 rounded-lg border border-[#1E64C8]/10">
-                                      <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                        <FileText className="w-3.5 h-3.5 text-[#1E64C8]" />
-                                        Abstract details
-                                      </h4>
-                                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans whitespace-pre-line">
-                                        {poster.abstract || "Detailed content abstracts scheduled by academic presenter will appear here."}
-                                      </p>
-                                    </div>
-
-                                    {isSelectableToVote && (
-                                      <div className="flex justify-end pt-2 border-t border-slate-100">
-                                        <button
-                                          type="button"
-                                          onClick={() => setSelectedMasterPosterId(isBallotChoice ? null : poster.id)}
-                                          className={`text-xs font-bold py-2 px-4 rounded-lg transition flex items-center gap-1.5 cursor-pointer hover:shadow-sm ${
-                                            isBallotChoice 
-                                              ? "bg-amber-500 border border-amber-600 text-white hover:bg-amber-650" 
-                                              : "bg-emerald-600 border border-emerald-650 text-white hover:bg-emerald-700"
-                                          }`}
-                                        >
-                                          <Check className="w-3.5 h-3.5" />
-                                          <span>{isBallotChoice ? "Deselect this Poster" : "Select Option " + getDisplayId(poster.id) + " as my Master Student Choice"}</span>
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </motion.div>
+                              {/* Selection status or select button */}
+                              {isSelectableToVote && (
+                                <div className="shrink-0 sm:self-center flex justify-end">
+                                  <button
+                                    type="button"
+                                    disabled={isLocked}
+                                    className={`text-xs font-bold py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 ${
+                                      isLocked
+                                        ? "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed"
+                                        : isBallotChoice 
+                                          ? "bg-amber-500 border border-amber-600 text-white hover:bg-amber-600 animate-pulse" 
+                                          : "bg-emerald-600/10 text-emerald-700 border border-emerald-650/20 hover:bg-emerald-600 hover:text-white"
+                                    }`}
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>
+                                      {isLocked
+                                        ? "Locked"
+                                        : isBallotChoice ? "Selected" : "Select Poster"
+                                      }
+                                    </span>
+                                  </button>
+                                </div>
                               )}
-                            </AnimatePresence>
+                            </div>
                           </div>
                         );
                       })}
@@ -1419,12 +1441,19 @@ export default function App() {
 
                         {/* PhD selection card */}
                         <div className="bg-slate-50 border border-slate-250/50 rounded-xl p-3">
-                          <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 block mb-1.5">
-                            Category A: PhD & Postdoc Poster Price
-                          </span>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400">
+                              Category A: PhD & Postdoc Poster Prize
+                            </span>
+                            {votedCategories.phd_postdoc && (
+                              <span className="text-[8px] tracking-wider uppercase font-extrabold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
+                                Cast
+                              </span>
+                            )}
+                          </div>
                           {selectedPhdPosterId ? (
                             <div className="bg-white border border-emerald-100 p-2 rounded-lg flex items-start gap-2 shadow-sm">
-                              <span className="h-5 w-5 bg-[#1E64C8] text-white rounded font-mono font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5" title={`Option ID: ${selectedPhdPosterId}`}>
+                              <span className={`h-5 w-5 ${votedCategories.phd_postdoc ? "bg-slate-400" : "bg-[#1E64C8]"} text-white rounded font-mono font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5`} title={`Option ID: ${selectedPhdPosterId}`}>
                                 {getDisplayId(selectedPhdPosterId)}
                               </span>
                               <div className="min-w-0">
@@ -1443,12 +1472,19 @@ export default function App() {
 
                         {/* Master selection card */}
                         <div className="bg-slate-50 border border-slate-250/50 rounded-xl p-3">
-                          <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400 block mb-1.5">
-                            Category B: Master Student Poster Price
-                          </span>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400">
+                              Category B: Master Student Poster Prize
+                            </span>
+                            {votedCategories.master_student && (
+                              <span className="text-[8px] tracking-wider uppercase font-extrabold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
+                                Cast
+                              </span>
+                            )}
+                          </div>
                           {selectedMasterPosterId ? (
                             <div className="bg-white border border-emerald-100 p-2 rounded-lg flex items-start gap-2 shadow-sm">
-                              <span className="h-5 w-5 bg-emerald-600 text-white rounded font-mono font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5" title={`Option ID: ${selectedMasterPosterId}`}>
+                              <span className={`h-5 w-5 ${votedCategories.master_student ? "bg-slate-400" : "bg-emerald-600"} text-white rounded font-mono font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5`} title={`Option ID: ${selectedMasterPosterId}`}>
                                 {getDisplayId(selectedMasterPosterId)}
                               </span>
                               <div className="min-w-0">
@@ -1469,9 +1505,13 @@ export default function App() {
                       <button
                         type="button"
                         onClick={handleCastVote}
-                        disabled={submittingVote || (!selectedPhdPosterId && !selectedMasterPosterId)}
+                        disabled={
+                          submittingVote || 
+                          ((!votedCategories.phd_postdoc && !selectedPhdPosterId) && 
+                           (!votedCategories.master_student && !selectedMasterPosterId))
+                        }
                         className={`w-full py-3 px-5 text-xs font-bold uppercase tracking-wider rounded-xl transition duration-150 flex items-center justify-center gap-2 cursor-pointer ${
-                          (selectedPhdPosterId || selectedMasterPosterId) 
+                          ((!votedCategories.phd_postdoc && selectedPhdPosterId) || (!votedCategories.master_student && selectedMasterPosterId)) 
                             ? "bg-[#1E64C8] hover:bg-[#15458c] text-white shadow-md hover:shadow-lg" 
                             : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
                         }`}
@@ -1481,7 +1521,12 @@ export default function App() {
                         ) : (
                           <>
                             <CheckCircle2 className="w-4 h-4" />
-                            <span>Cast My Vote Permanently</span>
+                            <span>
+                              {votedCategories.phd_postdoc || votedCategories.master_student
+                                ? "Cast Remaining Ballot"
+                                : "Cast Selected Ballot(s)"
+                              }
+                            </span>
                           </>
                         )}
                       </button>
@@ -1505,7 +1550,7 @@ export default function App() {
                         Thank You! Ballot Logged
                       </h3>
                       <p className="text-xs text-slate-500 leading-relaxed mt-1.5 max-w-xs mx-auto">
-                        Your secure, authoritative choice choice has been locked on the UGent central portal for <strong className="text-slate-700">{tempVoterEmail}</strong>.
+                        Your secure, authoritative choices have been locked on the UGent central portal for <strong className="text-slate-700">{tempVoterEmail}</strong>.
                       </p>
 
                       {/* Receipt audit structure */}
@@ -1518,8 +1563,8 @@ export default function App() {
                           <span className="text-slate-700 font-bold truncate max-w-[130px]">{tempVoterEmail}</span>
                         </div>
                         <div className="flex justify-between border-b border-slate-100 pb-1.5">
-                          <span className="text-slate-400">BALLOT</span>
-                          <span className="text-slate-700 font-bold">1 BALLOT CAST</span>
+                          <span className="text-slate-400">BALLOTS</span>
+                          <span className="text-slate-700 font-bold">UGENT BOTH CATEGORIES CAST</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">DATE</span>
@@ -1956,27 +2001,52 @@ export default function App() {
                           </div>
 
                           {/* Current Status Log Table */}
-                          <div className="border border-slate-200 rounded-xl overflow-hidden mt-2">
+                           <div className="border border-slate-200 rounded-xl overflow-hidden mt-2">
                             <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">
                               CURRENT ROSTER STATUS
                             </div>
                             <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto">
-                              {adminState.voters.map((voter) => (
-                                <div key={voter.email} className="px-4 py-3 text-xs flex justify-between items-center bg-white">
-                                  <div>
-                                    <span className="font-mono text-slate-700 font-semibold">{voter.email}</span>
+                              {adminState.voters.map((voter) => {
+                                const vVotes = adminState.votes.filter(v => v.voterEmail.toLowerCase() === voter.email.toLowerCase());
+                                const hasVotedPhd = vVotes.some(v => {
+                                  if (v.category === "phd_postdoc") return true;
+                                  const opt = adminState.options.find(o => o.id === v.optionId);
+                                  return opt?.category === "phd_postdoc" || (!v.category && !opt?.category && parseInt(v.optionId) <= 2);
+                                });
+                                const hasVotedMaster = vVotes.some(v => {
+                                  if (v.category === "master_student") return true;
+                                  const opt = adminState.options.find(o => o.id === v.optionId);
+                                  return opt?.category === "master_student" || (!v.category && !opt?.category && parseInt(v.optionId) > 2);
+                                });
+
+                                return (
+                                  <div key={voter.email} className="px-4 py-3 text-xs flex justify-between items-center bg-white">
+                                    <div>
+                                      <span className="font-mono text-slate-700 font-semibold block">{voter.email}</span>
+                                      <div className="flex gap-2.5 mt-1 text-[10px]">
+                                        <span className={`font-medium ${hasVotedPhd ? "text-emerald-600 font-bold" : "text-slate-400"}`}>
+                                          PhD: {hasVotedPhd ? "Cast" : "Pending"}
+                                        </span>
+                                        <span className="text-slate-300">|</span>
+                                        <span className={`font-medium ${hasVotedMaster ? "text-emerald-600 font-bold" : "text-slate-400"}`}>
+                                          Master: {hasVotedMaster ? "Cast" : "Pending"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2.5 shrink-0">
+                                      <span className={`inline-flex items-center gap-1 font-bold text-[9px] px-2 py-0.5 rounded uppercase ${
+                                        voter.hasVoted 
+                                          ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
+                                          : (hasVotedPhd || hasVotedMaster)
+                                            ? "bg-amber-50 text-amber-700 border border-amber-100"
+                                            : "bg-slate-100 text-slate-400 border border-slate-200"
+                                      }`}>
+                                        {voter.hasVoted ? "Both Cast" : (hasVotedPhd || hasVotedMaster) ? "Partial" : "Pending"}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2.5 shrink-0">
-                                    <span className={`inline-flex items-center gap-1 font-bold text-[9px] px-2 py-0.5 rounded uppercase ${
-                                      voter.hasVoted 
-                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
-                                        : "bg-slate-100 text-slate-400 border border-slate-200"
-                                    }`}>
-                                      {voter.hasVoted ? "Has Voted" : "Pending"}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
 

@@ -1,0 +1,34 @@
+{
+  "entities": {
+    "AppState": {
+      "title": "AppState",
+      "description": "Entire application state stored in a single document for simple relational tracking",
+      "type": "object",
+      "properties": {
+        "voters": {
+          "type": "array",
+          "description": "List of whitelisted voters"
+        },
+        "options": {
+          "type": "array",
+          "description": "List of voting poster options"
+        },
+        "votes": {
+          "type": "array",
+          "description": "List of cast votes"
+        },
+        "settings": {
+          "type": "object",
+          "description": "Global application settings and admin pin"
+        }
+      },
+      "required": ["voters", "options", "votes", "settings"]
+    }
+  },
+  "firestore": {
+    "/app/{documentId}": {
+      "schema": "AppState",
+      "description": "Primary application configuration collection"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Explicit path for the app collection
+    match /app/{documentId} {
+      allow read, write: if false; // Accessed strictly server-side via Admin SDK
+    }
+  }
+}
