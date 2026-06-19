@@ -39,6 +39,7 @@ interface PublicState {
   }>;
   totalVotersCount: number;
   totalVotesCast: number;
+  uniqueVotersVoted?: number;
   votersList: Array<{
     email: string;
     hasVoted: boolean;
@@ -344,6 +345,7 @@ export default function App() {
         }
 
         const displayOptions = options.map((opt: any) => ({ ...opt, votes: null }));
+        const uniqueVotersVotedCount = new Set(votes.map((v: any) => (v.voterEmail || "").toLowerCase())).size;
 
         setPublicState({
           votingConcluded: concluded,
@@ -351,6 +353,7 @@ export default function App() {
           options: displayOptions,
           totalVotersCount: voters.length,
           totalVotesCast: votes.length,
+          uniqueVotersVoted: uniqueVotersVotedCount,
           votersList: []
         });
         setErrorMessage(null);
@@ -868,7 +871,8 @@ export default function App() {
   // Turnout Stats Helper
   const totalWhitelisted = publicState?.totalVotersCount || 3;
   const totalVotesCastCount = publicState?.totalVotesCast || 0;
-  const turnoutPercent = totalWhitelisted > 0 ? Math.round((totalVotesCastCount / totalWhitelisted) * 100) : 0;
+  const uniqueVotersVoted = publicState?.uniqueVotersVoted || 0;
+  const turnoutPercent = totalWhitelisted > 0 ? Math.round((uniqueVotersVoted / totalWhitelisted) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-800 font-sans flex flex-col selection:bg-ugent-yellow/40">
@@ -929,7 +933,7 @@ export default function App() {
                     <div className="h-4 w-px bg-slate-300/60"></div>
                     <div className="flex items-center gap-1.5 text-slate-700">
                       <Users className="w-4 h-4 text-[#1E64C8]" />
-                      <span>Ballots Counted: <strong className="text-slate-900">{totalVotesCastCount} / {totalWhitelisted}</strong></span>
+                      <span>Voters Participated: <strong className="text-slate-900">{uniqueVotersVoted} / {totalWhitelisted}</strong> <span className="text-slate-400 font-normal">({totalVotesCastCount} ballots)</span></span>
                     </div>
                   </>
                 )}
@@ -952,7 +956,7 @@ export default function App() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
         
         {/* ================= LEFT 3/5 COLUMN: POSTER LIST & DETAILS ================= */}
-        <section id="academic-poster-showcase" className="flex-1 lg:max-w-[62%] flex flex-col gap-6">
+        <section id="academic-poster-showcase" className="flex-1 lg:max-w-[62%] flex flex-col gap-6 order-2 lg:order-1">
           
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-display font-extrabold text-[#1E64C8] mb-1">
@@ -1145,7 +1149,7 @@ export default function App() {
         </section>
 
         {/* ================= RIGHT 2/5 COLUMN: INTERACTIVE BALLOT BOX ================= */}
-        <section id="interactive-ballot-box" className="w-full lg:max-w-[38%] flex flex-col gap-6">
+        <section id="interactive-ballot-box" className="w-full lg:max-w-[38%] flex flex-col gap-6 order-1 lg:order-2">
           
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             {/* Top Indicator bar */}
@@ -1580,7 +1584,7 @@ export default function App() {
                             <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
                               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest block">turnout percent</span>
                               <div className="text-3xl font-display font-black text-[#1E64C8] mt-1.5">
-                                {adminState.voters.length > 0 ? Math.round((adminState.votes.length / adminState.voters.length) * 100) : 0}%
+                                {adminState.voters.length > 0 ? Math.round((new Set(adminState.votes.map(v => (v.voterEmail || "").toLowerCase())).size / adminState.voters.length) * 100) : 0}%
                               </div>
                               <span className="text-[10px] font-mono text-slate-400">of total whitelisted users</span>
                             </div>
