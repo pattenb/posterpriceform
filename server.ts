@@ -274,14 +274,6 @@ async function readDb(): Promise<DbSchema> {
           memoryDb = data;
           return data;
         }
-<<<<<<< HEAD
-=======
-      } else {
-        console.log("No database state document in Firestore. Bootstrapping with DEFAULT_DB...");
-        await setDoc(docRef, DEFAULT_DB);
-        memoryDb = { ...DEFAULT_DB };
-        return memoryDb;
->>>>>>> 10a97bcb927cd63327a6c864aa2d28f85756e090
       }
       
       console.log("No valid database state in Firestore. Bootstrapping with DEFAULT_DB...");
