@@ -266,7 +266,7 @@ async function readDb(): Promise<DbSchema> {
   // Always query cloud first if firestore exists to ensure multi-container synchronization
   if (firestoreDb) {
     try {
-      const docRef = doc(firestoreDb, "app", "state");
+      const docRef = doc(firestoreDb, "app", "main");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data() as DbSchema;
@@ -309,7 +309,7 @@ async function writeDb(data: DbSchema): Promise<void> {
   
   if (firestoreDb) {
     try {
-      const docRef = doc(firestoreDb, "app", "state");
+      const docRef = doc(firestoreDb, "app", "main");
       await setDoc(docRef, data);
     } catch (error) {
       console.error("Error writing database state to Firestore:", error);

@@ -23,6 +23,8 @@ import {
   Award
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 // Interfaces
 interface PublicState {
@@ -71,549 +73,204 @@ interface AdminState {
   }>;
 }
 
-// ==================== SMART CLIENT-SIDE FALLBACK (FOR GITHUB PAGES) ====================
-if (typeof window !== "undefined") {
-  localStorage.removeItem("force_static_fallback");
-}
+// ==================== FIREBASE DIRECT SECURE DATABASE INTEGRATION ====================
 
-let globalStaticFallback = typeof window !== "undefined" && (
-  window.location.hostname.endsWith("github.io") ||
-  window.location.hostname.endsWith("gitlab.io") ||
-  window.location.hostname.endsWith("pages.dev") ||
-  window.location.protocol === "file:"
-);
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBTPln5uCix12NCWFguv3kjZrmpTXuKG_k",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "gen-lang-client-0510211953.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "gen-lang-client-0510211953",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "gen-lang-client-0510211953.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "186128313383",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:186128313383:web:edc78868f637ee7afaf202",
+};
 
-const DB_STORAGE_KEY = "ugent_ballot_local_db";
+const firebaseApp = initializeApp(firebaseConfig);
+const dbId = import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-73c85276-581b-461e-940f-7ea37f7600b9";
+const db = getFirestore(firebaseApp, dbId);
 
-const getLocalDb = () => {
-  const data = localStorage.getItem(DB_STORAGE_KEY);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch (e) {
-      // Ignore
-    }
-  }
-
-  const initialDb = {
-    settings: {
-      votingConcluded: false,
-      votingEndTime: null,
-      adminPin: "1234",
+const initialDb = {
+  settings: {
+    votingConcluded: false,
+    votingEndTime: null,
+    adminPin: "1234",
+  },
+  voters: [
+    { email: "pat.borra@ugent.be", pin: null, hasVoted: false, votedAt: null },
+    { email: "els.bruneel@ugent.be", pin: null, hasVoted: false, votedAt: null },
+    { email: "borrapat@gmail.com", pin: null, hasVoted: false, votedAt: null },
+    { email: "fartmasterp2@gmail.com", pin: null, hasVoted: false, votedAt: null }
+  ],
+  options: [
+    {
+      id: "phd-1",
+      category: "phd_postdoc",
+      title: "The role of the parameter landscape in Hartree–Fock quantum computing benchmarks",
+      author: "Ruben Van der Stichelen",
+      abstract: "An in-depth investigation into parameter landscape characteristics in Hartree–Fock quantum computing benchmarks, exploring optimization challenges, convergence, and performance thresholds."
     },
-    voters: [
-      { email: "pat.borra@ugent.be", pin: null, hasVoted: false, votedAt: null },
-      { email: "els.bruneel@ugent.be", pin: null, hasVoted: false, votedAt: null },
-      { email: "borrapat@gmail.com", pin: null, hasVoted: false, votedAt: null }
-    ],
-    options: [
-      {
-        id: "phd-1",
-        category: "phd_postdoc",
-        title: "The role of the parameter landscape in Hartree–Fock quantum computing benchmarks",
-        author: "Ruben Van der Stichelen",
-        abstract: "An in-depth investigation into parameter landscape characteristics in Hartree–Fock quantum computing benchmarks, exploring optimization challenges, convergence, and performance thresholds."
-      },
-      {
-        id: "phd-2",
-        category: "phd_postdoc",
-        title: "InP Quantum Dots: from Atomistic Reconstruction to Opto-Electronic Properties",
-        author: "Norick De Vlamynck",
-        abstract: "Exploring indium phosphide (InP) quantum dots through atomistic reconstruction techniques and analyzing their corresponding opto-electronic signatures and potential applications."
-      },
-      {
-        id: "phd-3",
-        category: "phd_postdoc",
-        title: "Improving Untargeted Metabolomic Analysis in HIV-Infected Plasma Through Miniaturized Reversed-Phase Chromatography",
-        author: "Lander Iterbeke",
-        abstract: "Methodologies and improvements for untargeted metabolomic screening of HIV-infected plasma utilizing state-of-the-art miniaturized reversed-phase high-performance liquid chromatography."
-      },
-      {
-        id: "phd-4",
-        category: "phd_postdoc",
-        title: "Combining Per-Aqueous and Chiral Reversed-Phase Separation Modes Towards a Comprehensive Two-Dimensional LC Platform for Amino Acid Analysis",
-        author: "José Meneses",
-        abstract: "Developing a multi-dimensional liquid chromatography platform that integrates per-aqueous and chiral reversed-phase systems to provide highly comprehensive amino acid separations."
-      },
-      {
-        id: "phd-5",
-        category: "phd_postdoc",
-        title: "Hide and Seek - Amide Rotation-induced Chirality Hidden in Plain Sight",
-        author: "Sean Verschaeve",
-        abstract: "Uncovering hidden conformational stereochemistry and dynamics arising from hindered amide rotation-induced chirality inside complex molecular assemblies."
-      },
-      {
-        id: "phd-6",
-        category: "phd_postdoc",
-        title: "Exploring Tm-Yb(-Nd)-doped LiLuF4 NPs as a novel downshifting NIR thermometer",
-        author: "Petryna Sofia",
-        abstract: "Investigating trivalent thulium, ytterbium, and neodymium co-doped lithium lutetium fluoride nanoparticles as high-sensitivity luminescent probes for near-infrared temperature sensing."
-      },
-      {
-        id: "phd-7",
-        category: "phd_postdoc",
-        title: "Biodegradable Na₃ZrF₇:Yb³⁺–Ho³⁺–Er³⁺ Nanoparticles as Luminescent Nanothermometers: From Downshifting Emission to Multifunctional Platforms",
-        author: "Abedi Tameh Fatemeh",
-        abstract: "Synthesis and optical characterization of biodegradable sodium zirconium fluoride nanothermometers co-doped with lanthanide ions for multi-functional biomedical imaging and thermal tracking."
-      },
-      {
-        id: "phd-8",
-        category: "phd_postdoc",
-        title: "Terahertz Spectroscopy of Covalent Organic Frameworks",
-        author: "Gitta Van Hoof",
-        abstract: "Employing ultra-fast terahertz spectroscopy to investigate the structural dynamics, vibration modes, and charge transport behaviors inside crystalline covalent organic frameworks (COFs)."
-      },
-      {
-        id: "phd-9",
-        category: "phd_postdoc",
-        title: "Metal Organic Frameworks for Supercapacitors",
-        author: "Wafaa Ahmed Mohamed Moawad",
-        abstract: "Design, syntheses, and electrochemical performances of custom porous metal-organic frameworks (MOFs) engineered to maximize specific capacitances and cycle life in supercapacitor applications."
-      },
-      {
-        id: "master-1",
-        category: "master_student",
-        title: "The Evaluation of Data Processing Methods for Macro-Raman Mapping of Art Objects",
-        author: "Rachael Britton",
-        abstract: "Master research poster detailing the evaluation of alternative statistical processing and baseline correction methods of high-resolution micro/macro-Raman spectral mapping of cultural heritage artifacts."
-      },
-      {
-        id: "master-2",
-        category: "master_student",
-        title: "Hybrid Nanomaterials Combining Thermometry and Photodynamic Therapy",
-        author: "Brianna Woolery",
-        abstract: "Investigating multifunctional hybrid nanocomposites capable of synergistic optical temperature reading along with localized targeted photodynamic therapeutic excitation."
-      },
-      {
-        id: "master-3",
-        category: "master_student",
-        title: "Determination of Multi-Elemental Paleoclimate Proxies in Bivalve Shells via LA-ICP-TOF-MS Mapping",
-        author: "Robbe Van Ryckeghem",
-        abstract: "Utilizing advanced high-speed laser ablation inductively coupled plasma time-of-flight mass spectrometry to map high-resolution trace elements on bivalve shell thin sections as paleotemperature proxies."
-      },
-      {
-        id: "master-4",
-        category: "master_student",
-        title: "XRFPM: A Fundamental Parameter Based Code for the Analysis of XRF Spectra",
-        author: "Luca De Bruyn",
-        abstract: "Developing and compiling a lightweight, high-performance physical script utilizing fundamental parameter models for swift quantitative calibration and deconvolution of complex X-ray fluorescence spectra."
-      },
-      {
-        id: "master-5",
-        category: "master_student",
-        title: "Atomic Layer Deposition of functional coatings for Lithium-Ion batteries",
-        author: "Mitch Bruyneel",
-        abstract: "Employing precise nanoscale atomic layer deposition (ALD) techniques to engineer uniform, ultra-thin protecting layers stabilizing cathode interfaces against degradation in rechargeable batteries."
-      },
-      {
-        id: "master-6",
-        category: "master_student",
-        title: "Gallium Incorporation in In(As,P)/InP Quantum Dots with Molten Salt Processing",
-        author: "Ramón Coolens",
-        abstract: "Synthesizing and structural tracking of gallium introduction inside indium arsenide phosphide quantum dots using controlled high-temperature molten salt reactions."
-      },
-      {
-        id: "master-7",
-        category: "master_student",
-        title: "Optimisation of Thiolated Self-Assembled Monolayers for Antibody Attachment to Gold Electrodes",
-        author: "Ruby Cornand",
-        abstract: "Systematic optimization of gold surface self-assembly dynamics using thiolated organic chains designed to promote bio-compatible, high-density receptor and antibody immobilization."
-      },
-      {
-        id: "master-8",
-        category: "master_student",
-        title: "Analysis of Surface Orbitals in III-V Core Quantum Dot Alloys",
-        author: "Mattice Criel",
-        abstract: "Theoretical modeling and experimental benchmarking of the electronic structure, valence boundaries, and surface dangling orbital states in III-V semiconductor quantum dot core-shell structures."
-      },
-      {
-        id: "master-9",
-        category: "master_student",
-        title: "Dynamic poly(norbornene) networks making use of γ-hydroxy amide chemistry",
-        author: "Kenny Deré",
-        abstract: "Developing recyclable, self-healing polymer materials utilizing dynamic covalent exchange crossings based on retro-active γ-hydroxy amide reactions inside substituted norbornene backbones."
-      },
-      {
-        id: "master-10",
-        category: "master_student",
-        title: "From Strong to Weak Magnetic Fields: Characterizing the Evolution and Persistence of Exotic Magnetic Effects",
-        author: "Thibo Van Eeckhoorn",
-        abstract: "Investigating high-field and low-field magnetic susceptibility alignments, and tracking structural phase changes with persistent macroscopic electronic interactions."
-      },
-      {
-        id: "master-11",
-        category: "master_student",
-        title: "Modified gelatin as a biodegradable gene delivery system",
-        author: "Kobe De Bruyne",
-        abstract: "Synthesizing responsive chemically-modified gelatin nanopolyplexes as safe, non-toxic, and biological-stimuli micro-carriers for targeted intracellular gene therapeutics."
-      },
-      {
-        id: "master-12",
-        category: "master_student",
-        title: "Ga Alloying in InAs Quantum Dots Enabling SWIR Emission",
-        author: "Wiebe Volckaert",
-        abstract: "Tuning structural bandgaps to enable deep short-wave infrared (SWIR) luminescence through precise gallium alloying on indium-arsenide crystal cores."
-      },
-      {
-        id: "master-13",
-        category: "master_student",
-        title: "Statistical Characterization of Sampling Uncertainty in Maximal Probability Domains from Quantum Computing Wavefunctions",
-        author: "Yarno De Jaeger",
-        abstract: "Developing bounds and metrics for the estimation errors and sampling bounds of state probabilities drawn from simulated NISQ-era quantum computing wavefunctions."
-      },
-      {
-        id: "master-14",
-        category: "master_student",
-        title: "Synthesis and biological evaluation of fluorinated morphine glucuronide analogues",
-        author: "Agir Verhulst",
-        abstract: "Synthesizing novel fluorinated organic structures imitating active morphine glucuronides to evaluate competitive biological receptor binding and structural metabolic stability."
-      },
-      {
-        id: "master-15",
-        category: "master_student",
-        title: "Development of antioxidant hybrid hydrogel wound dressings via nanotechnology",
-        author: "Hannah Meuleman",
-        abstract: "Engineering highly bio-compatible hydrogel matrices embedded with antioxidant nanomaterials designed to actively scavenge reactive oxygen species (ROS) and accelerate wound recovery."
-      }
-    ],
-    votes: []
-  };
-  localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(initialDb));
-  return initialDb;
-};
-
-const saveLocalDb = (db: any) => {
-  localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(db));
-};
-
-class MockResponse {
-  ok: boolean;
-  status: number;
-  private data: any;
-
-  constructor(data: any, status = 200) {
-    this.ok = status >= 200 && status < 300;
-    this.status = status;
-    this.data = data;
-  }
-
-  async json() {
-    return this.data;
-  }
-}
-
-const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockResponse> => {
-  let body: any = {};
-  if (init && init.body) {
-    try {
-      body = JSON.parse(init.body as string);
-    } catch (e) {
-      // Ignore
+    {
+      id: "phd-2",
+      category: "phd_postdoc",
+      title: "InP Quantum Dots: from Atomistic Reconstruction to Opto-Electronic Properties",
+      author: "Norick De Vlamynck",
+      abstract: "Exploring indium phosphide (InP) quantum dots through atomistic reconstruction techniques and analyzing their corresponding opto-electronic signatures and potential applications."
+    },
+    {
+      id: "phd-3",
+      category: "phd_postdoc",
+      title: "Improving Untargeted Metabolomic Analysis in HIV-Infected Plasma Through Miniaturized Reversed-Phase Chromatography",
+      author: "Lander Iterbeke",
+      abstract: "Methodologies and improvements for untargeted metabolomic screening of HIV-infected plasma utilizing state-of-the-art miniaturized reversed-phase high-performance liquid chromatography."
+    },
+    {
+      id: "phd-4",
+      category: "phd_postdoc",
+      title: "Combining Per-Aqueous and Chiral Reversed-Phase Separation Modes Towards a Comprehensive Two-Dimensional LC Platform for Amino Acid Analysis",
+      author: "José Meneses",
+      abstract: "Developing a multi-dimensional liquid chromatography platform that integrates per-aqueous and chiral reversed-phase systems to provide highly comprehensive amino acid separations."
+    },
+    {
+      id: "phd-5",
+      category: "phd_postdoc",
+      title: "Hide and Seek - Amide Rotation-induced Chirality Hidden in Plain Sight",
+      author: "Sean Verschaeve",
+      abstract: "Uncovering hidden conformational stereochemistry and dynamics arising from hindered amide rotation-induced chirality inside complex molecular assemblies."
+    },
+    {
+      id: "phd-6",
+      category: "phd_postdoc",
+      title: "Exploring Tm-Yb(-Nd)-doped LiLuF4 NPs as a novel downshifting NIR thermometer",
+      author: "Petryna Sofia",
+      abstract: "Investigating trivalent thulium, ytterbium, and neodymium co-doped lithium lutetium fluoride nanoparticles as high-sensitivity luminescent probes for near-infrared temperature sensing."
+    },
+    {
+      id: "phd-7",
+      category: "phd_postdoc",
+      title: "Biodegradable Na₃ZrF₇:Yb³⁺–Ho³⁺–Er³⁺ Nanoparticles as Luminescent Nanothermometers: From Downshifting Emission to Multifunctional Platforms",
+      author: "Abedi Tameh Fatemeh",
+      abstract: "Synthesis and optical characterization of biodegradable sodium zirconium fluoride nanothermometers co-doped with lanthanide ions for multi-functional biomedical imaging and thermal tracking."
+    },
+    {
+      id: "phd-8",
+      category: "phd_postdoc",
+      title: "Terahertz Spectroscopy of Covalent Organic Frameworks",
+      author: "Gitta Van Hoof",
+      abstract: "Employing ultra-fast terahertz spectroscopy to investigate the structural dynamics, vibration modes, and charge transport behaviors inside crystalline covalent organic frameworks (COFs)."
+    },
+    {
+      id: "phd-9",
+      category: "phd_postdoc",
+      title: "Metal Organic Frameworks for Supercapacitors",
+      author: "Wafaa Ahmed Mohamed Moawad",
+      abstract: "Design, syntheses, and electrochemical performances of custom porous metal-organic frameworks (MOFs) engineered to maximize specific capacitances and cycle life in supercapacitor applications."
+    },
+    {
+      id: "master-1",
+      category: "master_student",
+      title: "The Evaluation of Data Processing Methods for Macro-Raman Mapping of Art Objects",
+      author: "Rachael Britton",
+      abstract: "Master research poster detailing the evaluation of alternative statistical processing and baseline correction methods of high-resolution micro/macro-Raman spectral mapping of cultural heritage artifacts."
+    },
+    {
+      id: "master-2",
+      category: "master_student",
+      title: "Hybrid Nanomaterials Combining Thermometry and Photodynamic Therapy",
+      author: "Brianna Woolery",
+      abstract: "Investigating multifunctional hybrid nanocomposites capable of synergistic optical temperature reading along with localized targeted photodynamic therapeutic excitation."
+    },
+    {
+      id: "master-3",
+      category: "master_student",
+      title: "Determination of Multi-Elemental Paleoclimate Proxies in Bivalve Shells via LA-ICP-TOF-MS Mapping",
+      author: "Robbe Van Ryckeghem",
+      abstract: "Utilizing advanced high-speed laser ablation inductively coupled plasma time-of-flight mass spectrometry to map high-resolution trace elements on bivalve shell thin sections as paleotemperature proxies."
+    },
+    {
+      id: "master-4",
+      category: "master_student",
+      title: "XRFPM: A Fundamental Parameter Based Code for the Analysis of XRF Spectra",
+      author: "Luca De Bruyn",
+      abstract: "Developing and compiling a lightweight, high-performance physical script utilizing fundamental parameter models for swift quantitative calibration and deconvolution of complex X-ray fluorescence spectra."
+    },
+    {
+      id: "master-5",
+      category: "master_student",
+      title: "Atomic Layer Deposition of functional coatings for Lithium-Ion batteries",
+      author: "Mitch Bruyneel",
+      abstract: "Employing precise nanoscale atomic layer deposition (ALD) techniques to engineer uniform, ultra-thin protecting layers stabilizing cathode interfaces against degradation in rechargeable batteries."
+    },
+    {
+      id: "master-6",
+      category: "master_student",
+      title: "Gallium Incorporation in In(As,P)/InP Quantum Dots with Molten Salt Processing",
+      author: "Ramón Coolens",
+      abstract: "Synthesizing and structural tracking of gallium introduction inside indium arsenide phosphide quantum dots using controlled high-temperature molten salt reactions."
+    },
+    {
+      id: "master-7",
+      category: "master_student",
+      title: "Optimisation of Thiolated Self-Assembled Monolayers for Antibody Attachment to Gold Electrodes",
+      author: "Ruby Cornand",
+      abstract: "Systematic optimization of gold surface self-assembly dynamics using thiolated organic chains designed to promote bio-compatible, high-density receptor and antibody immobilization."
+    },
+    {
+      id: "master-8",
+      category: "master_student",
+      title: "Analysis of Surface Orbitals in III-V Core Quantum Dot Alloys",
+      author: "Mattice Criel",
+      abstract: "Theoretical modeling and experimental benchmarking of the electronic structure, valence boundaries, and surface dangling orbital states in III-V semiconductor quantum dot core-shell structures."
+    },
+    {
+      id: "master-9",
+      category: "master_student",
+      title: "Dynamic poly(norbornene) networks making use of γ-hydroxy amide chemistry",
+      author: "Kenny Deré",
+      abstract: "Developing recyclable, self-healing polymer materials utilizing dynamic covalent exchange crossings based on retro-active γ-hydroxy amide reactions inside substituted norbornene backbones."
+    },
+    {
+      id: "master-10",
+      category: "master_student",
+      title: "From Strong to Weak Magnetic Fields: Characterizing the Evolution and Persistence of Exotic Magnetic Effects",
+      author: "Thibo Van Eeckhoorn",
+      abstract: "Investigating high-field and low-field magnetic susceptibility alignments, and tracking structural phase changes with persistent macroscopic electronic interactions."
+    },
+    {
+      id: "master-11",
+      category: "master_student",
+      title: "Modified gelatin as a biodegradable gene delivery system",
+      author: "Kobe De Bruyne",
+      abstract: "Synthesizing responsive chemically-modified gelatin nanopolyplexes as safe, non-toxic, and biological-stimuli micro-carriers for targeted intracellular gene therapeutics."
+    },
+    {
+      id: "master-12",
+      category: "master_student",
+      title: "Ga Alloying in InAs Quantum Dots Enabling SWIR Emission",
+      author: "Wiebe Volckaert",
+      abstract: "Tuning structural bandgaps to enable deep short-wave infrared (SWIR) luminescence through precise gallium alloying on indium-arsenide crystal cores."
+    },
+    {
+      id: "master-13",
+      category: "master_student",
+      title: "Statistical Characterization of Sampling Uncertainty in Maximal Probability Domains from Quantum Computing Wavefunctions",
+      author: "Yarno De Jaeger",
+      abstract: "Developing bounds and metrics for the estimation errors and sampling bounds of state probabilities drawn from simulated NISQ-era quantum computing wavefunctions."
+    },
+    {
+      id: "master-14",
+      category: "master_student",
+      title: "Synthesis and biological evaluation of fluorinated morphine glucuronide analogues",
+      author: "Agir Verhulst",
+      abstract: "Synthesizing novel fluorinated organic structures imitating active morphine glucuronides to evaluate competitive biological receptor binding and structural metabolic stability."
+    },
+    {
+      id: "master-15",
+      category: "master_student",
+      title: "Development of antioxidant hybrid hydrogel wound dressings via nanotechnology",
+      author: "Hannah Meuleman",
+      abstract: "Engineering highly bio-compatible hydrogel matrices embedded with antioxidant nanomaterials designed to actively scavenge reactive oxygen species (ROS) and accelerate wound recovery."
     }
-  }
-
-  const db = getLocalDb();
-
-  const respond = (data: any, status = 200) => {
-    return new MockResponse(data, status);
-  };
-
-  // 1. GET /api/state
-  if (url === "/api/state") {
-    let concluded = db.settings.votingConcluded;
-    if (db.settings.votingEndTime) {
-      const endTime = new Date(db.settings.votingEndTime).getTime();
-      const now = new Date().getTime();
-      if (now >= endTime && !db.settings.votingConcluded) {
-        db.settings.votingConcluded = true;
-        saveLocalDb(db);
-        concluded = true;
-      }
-    }
-
-    const displayOptions = db.options.map((opt: any) => ({ ...opt, votes: null }));
-
-    return respond({
-      votingConcluded: concluded,
-      votingEndTime: db.settings.votingEndTime,
-      options: displayOptions,
-      totalVotersCount: db.voters.length,
-      totalVotesCast: db.votes.length,
-      votersList: []
-    });
-  }
-
-  // check email
-  if (url === "/api/check-email") {
-    const email = (body.email || "").trim().toLowerCase();
-    const voter = db.voters.find((v: any) => v.email.toLowerCase() === email);
-
-    if (!voter) {
-      return respond({
-        isWhitelisted: false,
-        hasVoted: false,
-        votedCategories: {
-          phd_postdoc: false,
-          master_student: false
-        },
-        votedOptionIds: []
-      });
-    }
-
-    const userVotes = db.votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
-    const votedPhd = userVotes.some((v: any) => v.category === "phd_postdoc");
-    const votedMaster = userVotes.some((v: any) => v.category === "master_student");
-    const hasVotedAll = votedPhd && votedMaster;
-
-    return respond({
-      isWhitelisted: true,
-      hasVoted: hasVotedAll,
-      votedCategories: {
-        phd_postdoc: votedPhd,
-        master_student: votedMaster
-      },
-      votedOptionIds: userVotes.map((v: any) => v.optionId)
-    });
-  }
-
-  // cast vote
-  if (url === "/api/vote") {
-    const email = (body.email || "").trim().toLowerCase();
-    const optionId = String(body.optionId);
-
-    let concluded = db.settings.votingConcluded;
-    if (db.settings.votingEndTime) {
-      const endTime = new Date(db.settings.votingEndTime).getTime();
-      const now = new Date().getTime();
-      if (now >= endTime) {
-        db.settings.votingConcluded = true;
-        saveLocalDb(db);
-        concluded = true;
-      }
-    }
-
-    if (concluded) {
-      return respond({ error: "The voting period has concluded!" }, 400);
-    }
-
-    const voterIndex = db.voters.findIndex((v: any) => v.email.toLowerCase() === email);
-    if (voterIndex === -1) {
-      return respond({ error: "Email not whitelisted" }, 403);
-    }
-
-    const userVotes = db.votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
-    const votedPhd = userVotes.some((v: any) => v.category === "phd_postdoc");
-    const votedMaster = userVotes.some((v: any) => v.category === "master_student");
-
-    if (votedPhd && votedMaster) {
-      return respond({ error: "You have already cast ballots for both categories!" }, 400);
-    }
-
-    const selections: string[] = [];
-    if (body.phdPosterId && !votedPhd) {
-      const exists = db.options.some((o: any) => String(o.id) === String(body.phdPosterId));
-      if (!exists) {
-        return respond({ error: "Selected PhD/Postdoc option is invalid" }, 400);
-      }
-      selections.push(String(body.phdPosterId));
-    }
-    if (body.masterPosterId && !votedMaster) {
-      const exists = db.options.some((o: any) => String(o.id) === String(body.masterPosterId));
-      if (!exists) {
-        return respond({ error: "Selected Master Student option is invalid" }, 400);
-      }
-      selections.push(String(body.masterPosterId));
-    }
-
-    if (selections.length === 0 && optionId && optionId !== "undefined") {
-      const opt = db.options.find((o: any) => String(o.id) === optionId);
-      if (!opt) {
-        return respond({ error: "Invalid poster option" }, 400);
-      }
-      const alreadyVotedCat = userVotes.some((v: any) => v.category === opt.category);
-      if (alreadyVotedCat) {
-        return respond({ error: "You have already cast a ballot for this category!" }, 400);
-      }
-      selections.push(optionId);
-    }
-
-    if (selections.length === 0) {
-      return respond({ error: "You have already voted for the selected category or made no selection!" }, 400);
-    }
-
-    const timestamp = new Date().toISOString();
-    for (const sId of selections) {
-      const opt = db.options.find((o: any) => String(o.id) === sId);
-      db.votes.push({
-        voterEmail: email,
-        optionId: sId,
-        timestamp,
-        category: opt?.category
-      });
-    }
-
-    const allVotesAfter = db.votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
-    const hasPhdAfter = allVotesAfter.some((v: any) => v.category === "phd_postdoc");
-    const hasMasterAfter = allVotesAfter.some((v: any) => v.category === "master_student");
-
-    db.voters[voterIndex].hasVoted = hasPhdAfter && hasMasterAfter;
-    db.voters[voterIndex].votedAt = timestamp;
-
-    saveLocalDb(db);
-    return respond({ 
-      success: true, 
-      message: "Vote cast successfully!", 
-      isComplete: hasPhdAfter && hasMasterAfter 
-    });
-  }
-
-  // admin login
-  if (url === "/api/admin/login") {
-    const adminPin = (body.adminPin || "").trim();
-    if (adminPin === db.settings.adminPin) {
-      return respond({ success: true });
-    } else {
-      return respond({ error: "Incorrect Administrative PIN" }, 401);
-    }
-  }
-
-  // admin state
-  if (url === "/api/admin/state") {
-    const adminPin = (body.adminPin || "").trim();
-    if (adminPin !== db.settings.adminPin) {
-      return respond({ error: "Access Denied" }, 401);
-    }
-
-    const displayOptions = db.options.map((opt: any) => {
-      const voteCount = db.votes.filter((v: any) => String(v.optionId) === String(opt.id)).length;
-      return { ...opt, votes: voteCount };
-    });
-
-    return respond({
-      settings: db.settings,
-      voters: db.voters,
-      options: displayOptions,
-      votes: db.votes
-    });
-  }
-
-  // admin update settings
-  if (url === "/api/admin/update-settings") {
-    const { adminPin, votingConcluded, votingEndTime, newAdminPin } = body;
-    if (adminPin !== db.settings.adminPin) {
-      return respond({ error: "Access Denied" }, 401);
-    }
-
-    db.settings.votingConcluded = !!votingConcluded;
-    db.settings.votingEndTime = votingEndTime || null;
-    if (newAdminPin && typeof newAdminPin === "string" && newAdminPin.trim().length >= 4) {
-      db.settings.adminPin = newAdminPin.trim();
-    }
-
-    saveLocalDb(db);
-    return respond({ success: true, settings: db.settings });
-  }
-
-  // admin update whitelist
-  if (url === "/api/admin/update-whitelist") {
-    const { adminPin, emails } = body;
-    if (adminPin !== db.settings.adminPin) {
-      return respond({ error: "Access Denied" }, 401);
-    }
-
-    if (!Array.isArray(emails)) {
-      return respond({ error: "Emails list format is invalid" }, 400);
-    }
-
-    const cleanEmails = emails.map((e: any) => String(e).trim().toLowerCase()).filter(Boolean);
-    const updatedVoters = cleanEmails.map(email => {
-      const existing = db.voters.find((v: any) => v.email.toLowerCase() === email);
-      if (existing) {
-        return existing;
-      } else {
-        return { email, pin: null, hasVoted: false, votedAt: null };
-      }
-    });
-
-    db.voters = updatedVoters;
-    db.votes = db.votes.filter((v: any) => cleanEmails.includes(v.voterEmail));
-
-    saveLocalDb(db);
-    return respond({ success: true, voters: db.voters });
-  }
-
-  // admin update options
-  if (url === "/api/admin/update-options") {
-    const { adminPin, options } = body;
-    if (adminPin !== db.settings.adminPin) {
-      return respond({ error: "Access Denied" }, 401);
-    }
-
-    if (!Array.isArray(options)) {
-      return respond({ error: "Options list format is invalid" }, 400);
-    }
-
-    db.options = options.map((opt: any) => ({
-      id: String(opt.id),
-      title: String(opt.title || `Poster ${opt.id}`),
-      author: String(opt.author || `Presenter ${opt.id}`)
-    }));
-
-    saveLocalDb(db);
-    return respond({ success: true, options: db.options });
-  }
-
-  // admin reset
-  if (url === "/api/admin/reset") {
-    const { adminPin } = body;
-    if (adminPin !== db.settings.adminPin) {
-      return respond({ error: "Access Denied" }, 401);
-    }
-
-    db.votes = [];
-    db.voters = db.voters.map((v: any) => ({
-      ...v,
-      pin: null,
-      hasVoted: false,
-      votedAt: null
-    }));
-    db.settings.votingConcluded = false;
-    db.settings.votingEndTime = null;
-
-    saveLocalDb(db);
-    return respond({ success: true });
-  }
-
-  return respond({ error: "Endpoint Not Found" }, 404);
-};
-
-const apiFetch = async (url: string, init?: RequestInit): Promise<Response | MockResponse> => {
-  const base = (import.meta as any).env?.BASE_URL || "/";
-  const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
-
-  let targetUrl = url;
-  if (url.startsWith("/api/")) {
-    targetUrl = `${cleanBase}${url}`;
-  }
-
-  if (globalStaticFallback) {
-    return handleMockRequest(url, init);
-  }
-
-  try {
-    const res = await window.fetch(targetUrl, init);
-    if (!res.ok && res.status === 404 && url.startsWith("/api/")) {
-      console.warn("Backend API returned 404. Falling back to temporary mock handler.");
-      return handleMockRequest(url, init);
-    }
-    return res;
-  } catch (err) {
-    if (url.startsWith("/api/")) {
-      console.warn("Backend API connection failure. Falling back to temporary mock handler.", err);
-      return handleMockRequest(url, init);
-    }
-    throw err;
-  }
+  ],
+  votes: []
 };
 
 const getDisplayId = (id: string | null) => {
@@ -623,7 +280,6 @@ const getDisplayId = (id: string | null) => {
 };
 
 export default function App() {
-  const fetch = apiFetch;
   // --- Public / Voter State ---
   const [publicState, setPublicState] = useState<PublicState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -667,14 +323,45 @@ export default function App() {
   // Fetch Public State
   const fetchPublicState = async () => {
     try {
-      const res = await fetch("/api/state");
-      if (!res.ok) throw new Error("Failed to load voting status");
-      const data = await res.json();
-      setPublicState(data);
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        let settings = data.settings || {};
+        let voters = data.voters || [];
+        let options = data.options || [];
+        let votes = data.votes || [];
+
+        let concluded = settings.votingConcluded;
+        if (settings.votingEndTime) {
+          const endTime = new Date(settings.votingEndTime).getTime();
+          const now = new Date().getTime();
+          if (now >= endTime && !settings.votingConcluded) {
+            concluded = true;
+            const updatedSettings = { ...settings, votingConcluded: true };
+            await updateDoc(docRef, { settings: updatedSettings });
+          }
+        }
+
+        const displayOptions = options.map((opt: any) => ({ ...opt, votes: null }));
+
+        setPublicState({
+          votingConcluded: concluded,
+          votingEndTime: settings.votingEndTime,
+          options: displayOptions,
+          totalVotersCount: voters.length,
+          totalVotesCast: votes.length,
+          votersList: []
+        });
+        setErrorMessage(null);
+      } else {
+        await setDoc(docRef, initialDb);
+        setTimeout(fetchPublicState, 500);
+      }
       setLoading(false);
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err.message || "Connection failure to the corporate backend");
+      setErrorMessage(err.message || "Connection failure to the remote Firestore database");
       setLoading(false);
     }
   };
@@ -722,25 +409,37 @@ export default function App() {
     const savedEmail = localStorage.getItem("voter_email");
 
     if (savedEmail) {
-      fetch("/api/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: savedEmail })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.isWhitelisted) {
-          setTempVoterEmail(savedEmail);
-          setVotedCategories(data.votedCategories || { phd_postdoc: false, master_student: false });
-          setAlreadyVotedOptionIds(data.votedOptionIds || []);
-          if (data.hasVoted) {
-            setVoterStep("thank-you");
-          } else {
-            setVoterStep("voting");
+      const email = savedEmail.trim().toLowerCase();
+      const docRef = doc(db, "app", "main");
+      getDoc(docRef)
+        .then(docSnap => {
+          if (docSnap.exists()) {
+            const dbState = docSnap.data();
+            const voters = dbState.voters || [];
+            const votes = dbState.votes || [];
+
+            const voter = voters.find((v: any) => v.email.toLowerCase() === email);
+            if (voter) {
+              const userVotes = votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
+              const votedPhd = userVotes.some((v: any) => v.category === "phd_postdoc");
+              const votedMaster = userVotes.some((v: any) => v.category === "master_student");
+              const hasVotedAll = votedPhd && votedMaster;
+
+              setTempVoterEmail(savedEmail);
+              setVotedCategories({
+                phd_postdoc: votedPhd,
+                master_student: votedMaster
+              });
+              setAlreadyVotedOptionIds(userVotes.map((v: any) => v.optionId));
+              if (hasVotedAll) {
+                setVoterStep("thank-you");
+              } else {
+                setVoterStep("voting");
+              }
+            }
           }
-        }
-      })
-      .catch((e) => console.error("Error restoring session:", e));
+        })
+        .catch((e) => console.error("Error restoring session:", e));
     }
   }, []);
 
@@ -761,7 +460,7 @@ export default function App() {
     setCheckingEmail(true);
     setVoterMessage(null);
 
-    const email = emailInput.trim();
+    const email = emailInput.trim().toLowerCase();
     if (!email) {
       setVoterMessage({ text: "Please enter your email", type: "error" });
       setCheckingEmail(false);
@@ -769,16 +468,17 @@ export default function App() {
     }
 
     try {
-      const res = await fetch("/api/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error("Application state document not found.");
+      }
+      const dbState = docSnap.data();
+      const voters = dbState.voters || [];
+      const votes = dbState.votes || [];
 
-      if (!res.ok) throw new Error("Could not check email registry");
-      const data = await res.json();
-
-      if (!data.isWhitelisted) {
+      const voter = voters.find((v: any) => v.email.toLowerCase() === email);
+      if (!voter) {
         setVoterMessage({
           text: `The address "${email}" is not whitelisted for the Poster Prize. Please check for spelling mistakes or consult organizers.`,
           type: "error"
@@ -787,12 +487,20 @@ export default function App() {
         return;
       }
 
+      const userVotes = votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
+      const votedPhd = userVotes.some((v: any) => v.category === "phd_postdoc");
+      const votedMaster = userVotes.some((v: any) => v.category === "master_student");
+      const hasVotedAll = votedPhd && votedMaster;
+
       setTempVoterEmail(email);
       localStorage.setItem("voter_email", email);
-      setVotedCategories(data.votedCategories || { phd_postdoc: false, master_student: false });
-      setAlreadyVotedOptionIds(data.votedOptionIds || []);
+      setVotedCategories({
+        phd_postdoc: votedPhd,
+        master_student: votedMaster
+      });
+      setAlreadyVotedOptionIds(userVotes.map((v: any) => v.optionId));
 
-      if (data.hasVoted) {
+      if (hasVotedAll) {
         setVoterStep("thank-you");
       } else {
         setVoterStep("voting");
@@ -816,42 +524,100 @@ export default function App() {
 
     setSubmittingVote(true);
     try {
-      const res = await fetch("/api/vote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: tempVoterEmail,
-          phdPosterId: needPhdChoice ? selectedPhdPosterId : null,
-          masterPosterId: needMasterChoice ? selectedMasterPosterId : null
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to submit ballot");
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error("Application state document not found.");
       }
 
-      // Re-fetch email status to get updated voted states!
-      const checkRes = await fetch("/api/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: tempVoterEmail })
+      const dbState = docSnap.data();
+      let settings = dbState.settings || {};
+      let voters = dbState.voters || [];
+      let options = dbState.options || [];
+      let votes = dbState.votes || [];
+
+      // Check if concluded
+      let concluded = settings.votingConcluded;
+      if (settings.votingEndTime) {
+        const endTime = new Date(settings.votingEndTime).getTime();
+        const now = new Date().getTime();
+        if (now >= endTime) {
+          concluded = true;
+        }
+      }
+
+      if (concluded) {
+        throw new Error("The voting period has concluded!");
+      }
+
+      const email = tempVoterEmail.trim().toLowerCase();
+      const voterIndex = voters.findIndex((v: any) => v.email.toLowerCase() === email);
+      if (voterIndex === -1) {
+        throw new Error("Email not whitelisted");
+      }
+
+      const userVotes = votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
+      const votedPhd = userVotes.some((v: any) => v.category === "phd_postdoc");
+      const votedMaster = userVotes.some((v: any) => v.category === "master_student");
+
+      if (votedPhd && votedMaster) {
+        throw new Error("You have already cast ballots for both categories!");
+      }
+
+      const selections: string[] = [];
+      if (needPhdChoice && selectedPhdPosterId) {
+        const exists = options.some((o: any) => String(o.id) === String(selectedPhdPosterId));
+        if (!exists) {
+          throw new Error("Selected PhD/Postdoc option is invalid");
+        }
+        selections.push(String(selectedPhdPosterId));
+      }
+      if (needMasterChoice && selectedMasterPosterId) {
+        const exists = options.some((o: any) => String(o.id) === String(selectedMasterPosterId));
+        if (!exists) {
+          throw new Error("Selected Master Student option is invalid");
+        }
+        selections.push(String(selectedMasterPosterId));
+      }
+
+      if (selections.length === 0) {
+        throw new Error("You have already voted for the selected category or made no selection!");
+      }
+
+      const timestamp = new Date().toISOString();
+      for (const sId of selections) {
+        const opt = options.find((o: any) => String(o.id) === sId);
+        votes.push({
+          voterEmail: email,
+          optionId: sId,
+          timestamp,
+          category: opt?.category
+        });
+      }
+
+      const allVotesAfter = votes.filter((v: any) => v.voterEmail.toLowerCase() === email);
+      const hasPhdAfter = allVotesAfter.some((v: any) => v.category === "phd_postdoc");
+      const hasMasterAfter = allVotesAfter.some((v: any) => v.category === "master_student");
+
+      voters[voterIndex].hasVoted = hasPhdAfter && hasMasterAfter;
+      voters[voterIndex].votedAt = timestamp;
+
+      await updateDoc(docRef, {
+        votes,
+        voters
       });
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        setVotedCategories(checkData.votedCategories || { phd_postdoc: false, master_student: false });
-        setAlreadyVotedOptionIds(checkData.votedOptionIds || []);
-        if (checkData.hasVoted) {
-          setVoterStep("thank-you");
-        } else {
-          setVoterMessage({ text: "Your vote has been registered dynamically! Please complete the other category choice below.", type: "success" });
-        }
+
+      // Update local choices
+      setVotedCategories({
+        phd_postdoc: hasPhdAfter,
+        master_student: hasMasterAfter
+      });
+      setAlreadyVotedOptionIds(allVotesAfter.map((v: any) => v.optionId));
+
+      if (hasPhdAfter && hasMasterAfter) {
+        setVoterStep("thank-you");
       } else {
-        if (data.isComplete) {
-          setVoterStep("thank-you");
-        } else {
-          setVoterStep("thank-you");
-        }
+        setVoterMessage({ text: "Your vote has been registered dynamically! Please complete the other category choice below.", type: "success" });
       }
       fetchPublicState();
     } catch (err: any) {
@@ -874,23 +640,48 @@ export default function App() {
     setVoterStep("enter-email");
   };
 
+  // Helper to extract state and load it into editing buffers
+  const fetchAdminStateWithData = (dbState: any, pin: string) => {
+    const displayOptions = (dbState.options || []).map((opt: any) => {
+      const voteCount = (dbState.votes || []).filter((v: any) => String(v.optionId) === String(opt.id)).length;
+      return { ...opt, votes: voteCount };
+    });
+
+    const fullAdminState = {
+      settings: dbState.settings,
+      voters: dbState.voters,
+      options: displayOptions,
+      votes: dbState.votes
+    };
+
+    setAdminState(fullAdminState);
+    setEditOptions(displayOptions);
+    setNewVoterEmailList((dbState.voters || []).map((v: any) => v.email).join("\n"));
+    setAdminEndTimeString(
+      dbState.settings?.votingEndTime 
+        ? new Date(dbState.settings.votingEndTime).toISOString().slice(0, 16) 
+        : ""
+    );
+  };
+
   // Admin login credentials check
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminError(null);
     try {
-      const res = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminPin: adminPinInput })
-      });
-
-      if (!res.ok) {
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error("Database state document not found.");
+      }
+      const dbState = docSnap.data();
+      const pin = adminPinInput.trim();
+      if (pin === dbState.settings?.adminPin) {
+        setAdminAuthenticated(true);
+        fetchAdminStateWithData(dbState, pin);
+      } else {
         throw new Error("Incorrect Administrative Security PIN");
       }
-
-      setAdminAuthenticated(true);
-      fetchAdminState(adminPinInput);
     } catch (err: any) {
       setAdminError(err.message);
     }
@@ -900,24 +691,16 @@ export default function App() {
   const fetchAdminState = async (pin: string) => {
     setAdminIsLoading(true);
     try {
-      const res = await fetch("/api/admin/state", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminPin: pin })
-      });
-
-      if (!res.ok) throw new Error("Failed to load admin parameters");
-      const data = (await res.json()) as AdminState;
-      setAdminState(data);
-      
-      // Seed buffers
-      setEditOptions(data.options);
-      setNewVoterEmailList(data.voters.map(v => v.email).join("\n"));
-      setAdminEndTimeString(
-        data.settings.votingEndTime 
-          ? new Date(data.settings.votingEndTime).toISOString().slice(0, 16) 
-          : ""
-      );
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error("Database state document not found.");
+      }
+      const dbState = docSnap.data();
+      if (pin !== dbState.settings?.adminPin) {
+        throw new Error("Access Denied");
+      }
+      fetchAdminStateWithData(dbState, pin);
     } catch (err: any) {
       setAdminError(err.message);
     } finally {
@@ -931,59 +714,71 @@ export default function App() {
     setAdminSaveMessage(null);
 
     try {
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error("Application state document not found.");
+      }
+      const dbState = docSnap.data();
+
+      // Verify PIN
+      if (adminPinInput !== dbState.settings?.adminPin) {
+        throw new Error("Access Denied");
+      }
+
       const timeParsed = adminEndTimeString ? new Date(adminEndTimeString).toISOString() : null;
-      
-      // 1. Update Core settings
-      const res1 = await fetch("/api/admin/update-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminPin: adminPinInput,
-          votingConcluded: adminState.settings.votingConcluded,
-          votingEndTime: timeParsed,
-          newAdminPin: adminNewPin.trim() || undefined
-        })
-      });
 
-      if (!res1.ok) throw new Error("Could not update core parameters");
+      // 1. Prepare Settings
+      const newSettings = {
+        votingConcluded: adminState.settings.votingConcluded,
+        votingEndTime: timeParsed,
+        adminPin: (adminNewPin && adminNewPin.trim().length >= 4) ? adminNewPin.trim() : dbState.settings.adminPin
+      };
 
-      // 2. Update Poster Details (Options)
-      const res2 = await fetch("/api/admin/update-options", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminPin: adminPinInput,
-          options: editOptions
-        })
-      });
+      // 2. Prepare Options
+      const updatedOptions = editOptions.map((opt: any) => ({
+        id: String(opt.id),
+        title: String(opt.title || `Poster ${opt.id}`),
+        author: String(opt.author || `Presenter ${opt.id}`),
+        abstract: opt.abstract || "",
+        category: opt.category || "phd_postdoc"
+      }));
 
-      if (!res2.ok) throw new Error("Could not update poster details");
-
-      // 3. Update Whitelist Emails
-      const emailsArray = newVoterEmailList
+      // 3. Prepare Whitelist Voters
+      const cleanEmails = newVoterEmailList
         .split("\n")
         .map(l => l.trim().toLowerCase())
         .filter(Boolean);
 
-      const res3 = await fetch("/api/admin/update-whitelist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminPin: adminPinInput,
-          emails: emailsArray
-        })
+      const existingVoters = dbState.voters || [];
+      const updatedVoters = cleanEmails.map(email => {
+        const existing = existingVoters.find((v: any) => v.email.toLowerCase() === email);
+        if (existing) {
+          return existing;
+        } else {
+          return { email, pin: null, hasVoted: false, votedAt: null };
+        }
       });
 
-      if (!res3.ok) throw new Error("Could not save whitelist register");
+      // Filter votes to only allow votes from currently whitelisted emails
+      const updatedVotes = (dbState.votes || []).filter((v: any) => cleanEmails.includes(v.voterEmail.toLowerCase()));
+
+      // Write directly to Firestore
+      await setDoc(docRef, {
+        settings: newSettings,
+        voters: updatedVoters,
+        options: updatedOptions,
+        votes: updatedVotes
+      });
 
       setAdminSaveMessage({ text: "All administrative parameters and Whitelist successfully locked in!", type: "success" });
-      
-      if (adminNewPin.trim()) {
-        setAdminPinInput(adminNewPin.trim());
-        setAdminNewPin("");
-      }
 
-      fetchAdminState(adminPinInput);
+      const finalPin = newSettings.adminPin;
+      setAdminPinInput(finalPin);
+      setAdminNewPin("");
+
+      // Refresh admin and public state
+      fetchAdminState(finalPin);
       fetchPublicState();
     } catch (err: any) {
       setAdminSaveMessage({ text: err.message || "An exception occurred while saving changes", type: "error" });
@@ -994,19 +789,25 @@ export default function App() {
   const toggleVotingConcludedState = async (forceState: boolean) => {
     if (!adminState) return;
     try {
-      const res = await fetch("/api/admin/update-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminPin: adminPinInput,
-          votingConcluded: forceState,
-          votingEndTime: adminState.settings.votingEndTime
-        })
-      });
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error("Application state document not found.");
+      }
+      const dbState = docSnap.data();
+      if (adminPinInput !== dbState.settings?.adminPin) {
+        throw new Error("Access Denied");
+      }
 
-      if (!res.ok) throw new Error("Failed to change voting timeline on server");
-      fetchAdminState(adminPinInput);
-      fetchPublicState();
+      const settings = {
+        ...dbState.settings,
+        votingConcluded: forceState
+      };
+
+      await updateDoc(docRef, { settings });
+
+      await fetchAdminState(adminPinInput);
+      await fetchPublicState();
     } catch (err: any) {
       alert(err.message);
     }
@@ -1016,16 +817,38 @@ export default function App() {
   const handleResetDatabase = async () => {
     if (!confirm("CRITICAL ACTION: Resetting will clear all voter PIN setups and cast poster votes back to zero. Whitelist roster remains. Continue?")) return;
     try {
-      const res = await fetch("/api/admin/reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminPin: adminPinInput })
+      const docRef = doc(db, "app", "main");
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        throw new Error("Application state document not found.");
+      }
+      const dbState = docSnap.data();
+      if (adminPinInput !== dbState.settings?.adminPin) {
+        throw new Error("Access Denied");
+      }
+
+      const voters = (dbState.voters || []).map((v: any) => ({
+        ...v,
+        pin: null,
+        hasVoted: false,
+        votedAt: null
+      }));
+
+      const settings = {
+        ...dbState.settings,
+        votingConcluded: false,
+        votingEndTime: null
+      };
+
+      await updateDoc(docRef, {
+        votes: [],
+        voters,
+        settings
       });
 
-      if (!res.ok) throw new Error("Database purge failed on server");
       alert("System database has been reset successfully.");
-      fetchAdminState(adminPinInput);
-      fetchPublicState();
+      await fetchAdminState(adminPinInput);
+      await fetchPublicState();
       handleVoterLogout();
     } catch (err: any) {
       alert(err.message);
