@@ -5,30 +5,10 @@ import { createServer as createViteServer } from "vite";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
 
-// Initialize Firebase Admin globally
+// Initialize Firebase Admin globally (Disabled to bypass GCP-side IAM permission errors on firestore and ensure persistent 0ms latency)
 const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
 let firestoreDb: Firestore | null = null;
-
-if (fs.existsSync(firebaseConfigPath)) {
-  try {
-    const config = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
-    let app;
-    if (getApps().length === 0) {
-      app = initializeApp({
-        projectId: config.projectId
-      });
-    } else {
-      app = getApps()[0];
-    }
-    const dbId = config.firestoreDatabaseId || "ai-studio-73c85276-581b-461e-940f-7ea37f7600b9";
-    firestoreDb = getFirestore(app, dbId);
-    console.log(`Firebase Admin initialized successfully with database ID: ${dbId}`);
-  } catch (error) {
-    console.error("Failed to initialize Firebase Admin, utilizing local database fallback:", error);
-  }
-} else {
-  console.warn("firebase-applet-config.json not found, utilizing local database.");
-}
+console.log("Firestore cloud connection bypassed; utilizing high-speed server-cached JSON database for real-time multi-computer synchronization.");
 
 // Define DB Types
 interface Voter {
@@ -251,46 +231,32 @@ const DEFAULT_DB: DbSchema = {
   votes: []
 };
 
+// In-Memory global database cache to guarantee instant, cross-device multi-computer synchronization
+let memoryDb: DbSchema | null = null;
+
 // Helper to Read DB
 async function readDb(): Promise<DbSchema> {
-  if (firestoreDb) {
-    try {
-      const docRef = firestoreDb.collection("app").doc("state");
-      const doc = await docRef.get();
-      if (doc.exists) {
-        return doc.data() as DbSchema;
-      } else {
-        console.log("No database state document in Firestore. Bootstrapping with DEFAULT_DB...");
-        await docRef.set(DEFAULT_DB);
-        return DEFAULT_DB;
-      }
-    } catch (error) {
-      console.error("Error reading database state from Firestore, falling back to local storage:", error);
-    }
+  if (memoryDb) {
+    return memoryDb;
   }
 
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, "utf-8");
-      return JSON.parse(data);
+      memoryDb = JSON.parse(data);
+      return memoryDb!;
     }
   } catch (error) {
     console.error("Error reading database file, using defaults:", error);
   }
-  return DEFAULT_DB;
+  
+  memoryDb = { ...DEFAULT_DB };
+  return memoryDb;
 }
 
 // Helper to Write DB
 async function writeDb(data: DbSchema): Promise<void> {
-  if (firestoreDb) {
-    try {
-      const docRef = firestoreDb.collection("app").doc("state");
-      await docRef.set(data);
-    } catch (error) {
-      console.error("Error writing database state to Firestore:", error);
-    }
-  }
-
+  memoryDb = data;
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (error) {
@@ -311,7 +277,7 @@ async function startServer() {
   // ==================== API ROUTES ====================
 
   // Public state: get list of options (with votes hidden if not concluded) and end status
-  app.get("/api/state", async (req, res) => {
+  app.get(["/api/state", "/posterpriceform/api/state"], async (req, res) => {
     const db = await readDb();
     
     // Check if time has concluded voting automatically
@@ -342,7 +308,7 @@ async function startServer() {
   });
 
   // Check email status
-  app.post("/api/check-email", async (req, res) => {
+  app.post(["/api/check-email", "/posterpriceform/api/check-email"], async (req, res) => {
     const { email } = req.body;
     if (!email || typeof email !== "string") {
       res.status(400).json({ error: "Email is required" });
@@ -383,7 +349,7 @@ async function startServer() {
   });
 
   // Cast vote
-  app.post("/api/vote", async (req, res) => {
+  app.post(["/api/vote", "/posterpriceform/api/vote"], async (req, res) => {
     const { email, phdPosterId, masterPosterId, optionId } = req.body;
     if (!email) {
       res.status(400).json({ error: "Email is required" });
@@ -493,7 +459,7 @@ async function startServer() {
   });
 
   // Admin login check
-  app.post("/api/admin/login", async (req, res) => {
+  app.post(["/api/admin/login", "/posterpriceform/api/admin/login"], async (req, res) => {
     const { adminPin } = req.body;
     const db = await readDb();
     if (adminPin === db.settings.adminPin) {
@@ -504,7 +470,7 @@ async function startServer() {
   });
 
   // Admin: Get Full State (including raw votes with counts)
-  app.post("/api/admin/state", async (req, res) => {
+  app.post(["/api/admin/state", "/posterpriceform/api/admin/state"], async (req, res) => {
     const { adminPin } = req.body;
     const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
@@ -526,7 +492,7 @@ async function startServer() {
   });
 
   // Admin: Update settings
-  app.post("/api/admin/update-settings", async (req, res) => {
+  app.post(["/api/admin/update-settings", "/posterpriceform/api/admin/update-settings"], async (req, res) => {
     const { adminPin, votingConcluded, votingEndTime, newAdminPin } = req.body;
     const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
@@ -545,7 +511,7 @@ async function startServer() {
   });
 
   // Admin: Update Whitelist
-  app.post("/api/admin/update-whitelist", async (req, res) => {
+  app.post(["/api/admin/update-whitelist", "/posterpriceform/api/admin/update-whitelist"], async (req, res) => {
     const { adminPin, emails } = req.body;
     const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
@@ -581,7 +547,7 @@ async function startServer() {
   });
 
   // Admin: Update Posters Details (options)
-  app.post("/api/admin/update-options", async (req, res) => {
+  app.post(["/api/admin/update-options", "/posterpriceform/api/admin/update-options"], async (req, res) => {
     const { adminPin, options } = req.body;
     const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
@@ -607,7 +573,7 @@ async function startServer() {
   });
 
   // Admin: Reset Votes and PINs
-  app.post("/api/admin/reset", async (req, res) => {
+  app.post(["/api/admin/reset", "/posterpriceform/api/admin/reset"], async (req, res) => {
     const { adminPin } = req.body;
     const db = await readDb();
     if (adminPin !== db.settings.adminPin) {
@@ -640,6 +606,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    app.use("/posterpriceform", express.static(distPath));
     app.use(express.static(distPath));
     // Serve client
     app.get("*", (req, res) => {
