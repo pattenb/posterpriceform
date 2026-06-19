@@ -588,12 +588,20 @@ const handleMockRequest = async (url: string, init?: RequestInit): Promise<MockR
 };
 
 const apiFetch = async (url: string, init?: RequestInit): Promise<Response | MockResponse> => {
+  const base = (import.meta as any).env?.BASE_URL || "/";
+  const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+
+  let targetUrl = url;
+  if (url.startsWith("/api/")) {
+    targetUrl = `${cleanBase}${url}`;
+  }
+
   if (globalStaticFallback) {
     return handleMockRequest(url, init);
   }
 
   try {
-    const res = await window.fetch(url, init);
+    const res = await window.fetch(targetUrl, init);
     if (!res.ok && res.status === 404 && url.startsWith("/api/")) {
       console.warn("Backend API returned 404. Falling back to temporary mock handler.");
       return handleMockRequest(url, init);
