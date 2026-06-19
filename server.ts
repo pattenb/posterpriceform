@@ -2,13 +2,39 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, Firestore } from "firebase-admin/firestore";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
-// Initialize Firebase Admin globally (Disabled to bypass GCP-side IAM permission errors on firestore and ensure persistent 0ms latency)
+// Initialize Firebase Client SDK globally as a workaround for Admin SDK IAM constraints
 const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
-let firestoreDb: Firestore | null = null;
-console.log("Firestore cloud connection bypassed; utilizing high-speed server-cached JSON database for real-time multi-computer synchronization.");
+let firestoreDb: ReturnType<typeof getFirestore> | null = null;
+
+if (fs.existsSync(firebaseConfigPath)) {
+  try {
+    const config = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
+    let app;
+    if (getApps().length === 0) {
+      app = initializeApp({
+        apiKey: config.apiKey,
+        authDomain: config.authDomain,
+        projectId: config.projectId,
+        storageBucket: config.storageBucket,
+        messagingSenderId: config.messagingSenderId,
+        appId: config.appId
+      });
+    } else {
+      app = getApp();
+    }
+    const dbId = config.firestoreDatabaseId || "(default)";
+    firestoreDb = getFirestore(app, dbId);
+    console.log(`Firebase SDK initialized successfully with database ID: ${dbId}`);
+  } catch (error) {
+    console.error("Failed to initialize Firebase SDK, utilizing local database fallback:", error);
+  }
+} else {
+  console.warn("firebase-applet-config.json not found, utilizing local database.");
+}
+
 
 // Define DB Types
 interface Voter {
@@ -236,6 +262,28 @@ let memoryDb: DbSchema | null = null;
 
 // Helper to Read DB
 async function readDb(): Promise<DbSchema> {
+  // Always query cloud first if firestore exists to ensure multi-container synchronization
+  if (firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "app", "state");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data() as DbSchema;
+        if (data && data.voters && data.options) {
+          memoryDb = data;
+          return data;
+        }
+      } else {
+        console.log("No database state document in Firestore. Bootstrapping with DEFAULT_DB...");
+        await setDoc(docRef, DEFAULT_DB);
+        memoryDb = { ...DEFAULT_DB };
+        return memoryDb;
+      }
+    } catch (error) {
+      console.error("Error reading database state from Firestore, falling back to local storage:", error);
+    }
+  }
+
   if (memoryDb) {
     return memoryDb;
   }
@@ -257,6 +305,16 @@ async function readDb(): Promise<DbSchema> {
 // Helper to Write DB
 async function writeDb(data: DbSchema): Promise<void> {
   memoryDb = data;
+  
+  if (firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "app", "state");
+      await setDoc(docRef, data);
+    } catch (error) {
+      console.error("Error writing database state to Firestore:", error);
+    }
+  }
+
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (error) {
