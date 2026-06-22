@@ -1515,7 +1515,7 @@ export default function App() {
                 <form onSubmit={handleAdminLogin} className="w-full text-left flex flex-col gap-4">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase font-mono mb-1.5 uppercase">
-                      Admin Security PIN (Def: 1234)
+                      Admin Security PIN
                     </label>
                     <input
                       type="password"
