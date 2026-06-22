@@ -89,11 +89,20 @@ const firebaseApp = initializeApp(firebaseConfig);
 const dbId = import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-73c85276-581b-461e-940f-7ea37f7600b9";
 const db = getFirestore(firebaseApp, dbId);
 
+export const hashPin = async (text: string) => {
+  const msgBuffer = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+const HASH_DEFAULT = "f4adbeae42029d12dc4ae9a0da9812e5a59b1f7e413985f1cebda1c1968d64b9";
+
 const initialDb = {
   settings: {
     votingConcluded: false,
     votingEndTime: null,
-    adminPin: "1234",
+    adminPin: HASH_DEFAULT,
   },
   voters: [
     { email: "pat.borra@ugent.be", pin: null, hasVoted: false, votedAt: null },
@@ -679,7 +688,19 @@ export default function App() {
       }
       const dbState = docSnap.data();
       const pin = adminPinInput.trim();
-      if (pin === dbState.settings?.adminPin) {
+      const inputHash = await hashPin(pin);
+      
+      let isValid = false;
+      if (inputHash === dbState.settings?.adminPin) {
+        isValid = true;
+      } else if (dbState.settings?.adminPin === "1234" && inputHash === HASH_DEFAULT) {
+        // Transparent upgrade from old default database to new hashes
+        isValid = true;
+        dbState.settings.adminPin = HASH_DEFAULT;
+        await updateDoc(docRef, { "settings.adminPin": HASH_DEFAULT });
+      }
+
+      if (isValid) {
         setAdminAuthenticated(true);
         fetchAdminStateWithData(dbState, pin);
       } else {
@@ -700,7 +721,8 @@ export default function App() {
         throw new Error("Database state document not found.");
       }
       const dbState = docSnap.data();
-      if (pin !== dbState.settings?.adminPin) {
+      const inputHash = await hashPin(pin);
+      if (inputHash !== dbState.settings?.adminPin && dbState.settings?.adminPin !== pin) {
         throw new Error("Access Denied");
       }
       fetchAdminStateWithData(dbState, pin);
@@ -723,9 +745,10 @@ export default function App() {
         throw new Error("Application state document not found.");
       }
       const dbState = docSnap.data();
+      const inputHash = await hashPin(adminPinInput);
 
       // Verify PIN
-      if (adminPinInput !== dbState.settings?.adminPin) {
+      if (inputHash !== dbState.settings?.adminPin && dbState.settings?.adminPin !== adminPinInput) {
         throw new Error("Access Denied");
       }
 
@@ -735,7 +758,7 @@ export default function App() {
       const newSettings = {
         votingConcluded: adminState.settings.votingConcluded,
         votingEndTime: timeParsed,
-        adminPin: (adminNewPin && adminNewPin.trim().length >= 4) ? adminNewPin.trim() : dbState.settings.adminPin
+        adminPin: (adminNewPin && adminNewPin.trim().length >= 4) ? await hashPin(adminNewPin.trim()) : dbState.settings.adminPin
       };
 
       // 2. Prepare Options
@@ -776,7 +799,7 @@ export default function App() {
 
       setAdminSaveMessage({ text: "All administrative parameters and Whitelist successfully locked in!", type: "success" });
 
-      const finalPin = newSettings.adminPin;
+      const finalPin = (adminNewPin && adminNewPin.trim().length >= 4) ? adminNewPin.trim() : adminPinInput;
       setAdminPinInput(finalPin);
       setAdminNewPin("");
 
@@ -798,7 +821,8 @@ export default function App() {
         throw new Error("Application state document not found.");
       }
       const dbState = docSnap.data();
-      if (adminPinInput !== dbState.settings?.adminPin) {
+      const inputHash = await hashPin(adminPinInput);
+      if (inputHash !== dbState.settings?.adminPin && dbState.settings?.adminPin !== adminPinInput) {
         throw new Error("Access Denied");
       }
 
@@ -826,7 +850,8 @@ export default function App() {
         throw new Error("Application state document not found.");
       }
       const dbState = docSnap.data();
-      if (adminPinInput !== dbState.settings?.adminPin) {
+      const inputHash = await hashPin(adminPinInput);
+      if (inputHash !== dbState.settings?.adminPin && dbState.settings?.adminPin !== adminPinInput) {
         throw new Error("Access Denied");
       }
 
@@ -904,7 +929,7 @@ export default function App() {
                 </span>
               </div>
               <span className="text-[10px] uppercase font-mono tracking-wider text-slate-500 font-semibold">
-                Department of Chemistry • Poster Prize (PhD & Post-Docs)
+                Department of Chemistry • Poster Prize (PhD, Post-Docs & Master Students)
               </span>
               <h1 className="text-xl sm:text-2xl font-display font-bold leading-tight tracking-tight text-slate-900 mt-1">
                 Poster Prize Ballot Roster
@@ -1843,40 +1868,56 @@ export default function App() {
                             <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto">
                               {adminState.voters.map((voter) => {
                                 const vVotes = adminState.votes.filter(v => v.voterEmail.toLowerCase() === voter.email.toLowerCase());
-                                const hasVotedPhd = vVotes.some(v => {
+                                const phdVote = vVotes.find(v => {
                                   if (v.category === "phd_postdoc") return true;
                                   const opt = adminState.options.find(o => o.id === v.optionId);
                                   return opt?.category === "phd_postdoc" || (!v.category && !opt?.category && parseInt(v.optionId) <= 2);
                                 });
-                                const hasVotedMaster = vVotes.some(v => {
+                                const masterVote = vVotes.find(v => {
                                   if (v.category === "master_student") return true;
                                   const opt = adminState.options.find(o => o.id === v.optionId);
                                   return opt?.category === "master_student" || (!v.category && !opt?.category && parseInt(v.optionId) > 2);
                                 });
 
+                                const phdPoster = phdVote ? adminState.options.find(o => o.id === phdVote.optionId) : null;
+                                const masterPoster = masterVote ? adminState.options.find(o => o.id === masterVote.optionId) : null;
+
                                 return (
-                                  <div key={voter.email} className="px-4 py-3 text-xs flex justify-between items-center bg-white">
-                                    <div>
-                                      <span className="font-mono text-slate-700 font-semibold block">{voter.email}</span>
-                                      <div className="flex gap-2.5 mt-1 text-[10px]">
-                                        <span className={`font-medium ${hasVotedPhd ? "text-emerald-600 font-bold" : "text-slate-400"}`}>
-                                          PhD: {hasVotedPhd ? "Cast" : "Pending"}
-                                        </span>
-                                        <span className="text-slate-300">|</span>
-                                        <span className={`font-medium ${hasVotedMaster ? "text-emerald-600 font-bold" : "text-slate-400"}`}>
-                                          Master: {hasVotedMaster ? "Cast" : "Pending"}
-                                        </span>
+                                  <div key={voter.email} className="px-4 py-3 text-xs flex justify-between items-center bg-white gap-4">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="font-mono text-slate-700 font-semibold block truncate">{voter.email}</span>
+                                      <div className="flex flex-col gap-1 mt-1 text-[10px]">
+                                        <div className="flex items-start gap-1 leading-normal">
+                                          <span className="text-slate-400 font-mono shrink-0">PhD:</span>
+                                          {phdPoster ? (
+                                            <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded font-sans truncate" title={phdPoster.title}>
+                                              Option {getDisplayId(phdPoster.id)} - {phdPoster.title}
+                                            </span>
+                                          ) : (
+                                            <span className="text-slate-400 italic">Pending</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-start gap-1 leading-normal mt-0.5">
+                                          <span className="text-slate-400 font-mono shrink-0">Master:</span>
+                                          {masterPoster ? (
+                                            <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded font-sans truncate" title={masterPoster.title}>
+                                              Option {getDisplayId(masterPoster.id)} - {masterPoster.title}
+                                            </span>
+                                          ) : (
+                                            <span className="text-slate-400 italic">Pending</span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2.5 shrink-0">
                                       <span className={`inline-flex items-center gap-1 font-bold text-[9px] px-2 py-0.5 rounded uppercase ${
                                         voter.hasVoted 
                                           ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
-                                          : (hasVotedPhd || hasVotedMaster)
+                                          : (phdVote || masterVote)
                                             ? "bg-amber-50 text-amber-700 border border-amber-100"
                                             : "bg-slate-100 text-slate-400 border border-slate-200"
                                       }`}>
-                                        {voter.hasVoted ? "Both Cast" : (hasVotedPhd || hasVotedMaster) ? "Partial" : "Pending"}
+                                        {voter.hasVoted ? "Both Cast" : (phdVote || masterVote) ? "Partial" : "Pending"}
                                       </span>
                                     </div>
                                   </div>
