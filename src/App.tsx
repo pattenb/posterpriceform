@@ -96,7 +96,8 @@ export const hashPin = async (text: string) => {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-const HASH_DEFAULT = "f4adbeae42029d12dc4ae9a0da9812e5a59b1f7e413985f1cebda1c1968d64b9";
+const HASH_DEFAULT = "67db7fb61a6164e2cd92939b84e2ba31340f2ae6afdc084a259388f9fcd9bccf";
+const HASH_OLD = "f4adbeae42029d12dc4ae9a0da9812e5a59b1f7e413985f1cebda1c1968d64b9";
 
 const initialDb = {
   settings: {
@@ -173,6 +174,62 @@ const initialDb = {
       title: "Metal Organic Frameworks for Supercapacitors",
       author: "Wafaa Ahmed Mohamed Moawad",
       abstract: "Design, syntheses, and electrochemical performances of custom porous metal-organic frameworks (MOFs) engineered to maximize specific capacitances and cycle life in supercapacitor applications."
+    },
+    {
+      id: "phd-10",
+      category: "phd_postdoc",
+      title: "Design Criterion of Transient Grating Gate for Ultrafast Luminescence Spectroscopy",
+      author: "Ilyas Maulana Yahya",
+      abstract: "Investigating the design parameters and criteria for transient grating gates used in high-resolution ultrafast luminescence spectroscopy."
+    },
+    {
+      id: "phd-11",
+      category: "phd_postdoc",
+      title: "Influencing factors on the heating abilities of γ-Fe2O3 nanocrystals",
+      author: "Pauline Rooms",
+      abstract: "Analyzing various factors that influence the magnetic heating capabilities and thermal efficiency of iron oxide (γ-Fe2O3) nanocrystals."
+    },
+    {
+      id: "phd-12",
+      category: "phd_postdoc",
+      title: "Correlation between structural and optical properties of 2D hybrid perovskites",
+      author: "Paolo La Magna",
+      abstract: "Studying the interplay between structural configurations and the consequential optical behavior in two-dimensional hybrid perovskite materials."
+    },
+    {
+      id: "phd-13",
+      category: "phd_postdoc",
+      title: "Mechanochemical Suzuki-Miyaura Coupling",
+      author: "Ihar Mikhnavets",
+      abstract: "Exploring solid-state mechanochemical approaches to Suzuki-Miyaura cross-coupling reactions to enhance green chemistry and yield."
+    },
+    {
+      id: "phd-14",
+      category: "phd_postdoc",
+      title: "Structural Diversity in γ-CD-MOFs: Two New Polymorphs",
+      author: "Stijn Germonpré",
+      abstract: "Discovering and characterizing two novel polymorphs in gamma-cyclodextrin metal-organic frameworks and assessing their structural diversity."
+    },
+    {
+      id: "phd-15",
+      category: "phd_postdoc",
+      title: "Fundamental Parameter Method based Quantification of Rare Earth Elements within Rock Fragments from Asteroid Bennu",
+      author: "Thibaut Baert",
+      abstract: "Applying fundamental parameter-based methodologies to accurately quantify rare earth elements found in sample rock fragments procured from asteroid Bennu."
+    },
+    {
+      id: "phd-16",
+      category: "phd_postdoc",
+      title: "ARTDETECTor: A low-cost, high-precision MA-XRF scanner developed in the context of the ERC ARTDETECT project",
+      author: "Jasper Herthogs",
+      abstract: "Prototyping and developing 'ARTDETECTor', an accessible and high-resolution macroscopic X-ray fluorescence scanner tailored for cultural heritage evaluation."
+    },
+    {
+      id: "phd-17",
+      category: "phd_postdoc",
+      title: "Towards a Quantum Dot Digital Twin",
+      author: "Philippe Green",
+      abstract: "Building a comprehensive predictive framework and computational digital twin mapping model for optimizing the synthesis and behavior of quantum dots."
     },
     {
       id: "master-1",
@@ -278,6 +335,27 @@ const initialDb = {
       title: "Development of antioxidant hybrid hydrogel wound dressings via nanotechnology",
       author: "Hannah Meuleman",
       abstract: "Engineering highly bio-compatible hydrogel matrices embedded with antioxidant nanomaterials designed to actively scavenge reactive oxygen species (ROS) and accelerate wound recovery."
+    },
+    {
+      id: "master-16",
+      category: "master_student",
+      title: "Synthesis of Fluoroproline Models",
+      author: "Tibo Felix",
+      abstract: "Development and synthesis of various fluorinated proline derivatives for applications in conformationally controlled peptide and molecular architectures."
+    },
+    {
+      id: "master-17",
+      category: "master_student",
+      title: "Thiol-amine bioconjugation using bromo-ynone reagents for biopharmaceutical applications",
+      author: "Jana Vekeman",
+      abstract: "Investigating highly selective thiol-amine bioconjugation methodologies employing bromo-ynone linkers to generate stable and functional therapeutic bioconjugates."
+    },
+    {
+      id: "master-18",
+      category: "master_student",
+      title: "High-precision Sulfur isotopic analysis using MC-ICP-MS: a novel approach for studying brain redox imbalance in Alzheimer’s disease",
+      author: "Teun Vandenhaute",
+      abstract: "Applying multi-collector inductively coupled plasma mass spectrometry to accurately map sulfur isotope fractionations linked to oxidative stress in Alzheimer's disease models."
     }
   ],
   votes: []
@@ -340,6 +418,15 @@ export default function App() {
         let settings = data.settings || {};
         let voters = data.voters || [];
         let options = data.options || [];
+
+        // Upgrade Check: If initialDb has options that db doesn't have, add them!
+        const existingIds = new Set(options.map((o: any) => o.id));
+        const missingOptions = initialDb.options.filter((o: any) => !existingIds.has(o.id));
+        if (missingOptions.length > 0) {
+          options = [...options, ...missingOptions];
+          await updateDoc(docRef, { options });
+        }
+
         let votes = data.votes || [];
 
         let concluded = settings.votingConcluded;
@@ -693,7 +780,7 @@ export default function App() {
       let isValid = false;
       if (inputHash === dbState.settings?.adminPin) {
         isValid = true;
-      } else if (dbState.settings?.adminPin === "1234" && inputHash === HASH_DEFAULT) {
+      } else if ((dbState.settings?.adminPin === "1234" || dbState.settings?.adminPin === HASH_OLD) && inputHash === HASH_DEFAULT) {
         // Transparent upgrade from old default database to new hashes
         isValid = true;
         dbState.settings.adminPin = HASH_DEFAULT;
@@ -1933,7 +2020,7 @@ export default function App() {
                       {activeAdminTab === "posters" && (
                         <div className="flex flex-col gap-5">
                           <h4 className="text-xs font-mono font-extrabold text-slate-400 uppercase tracking-wider mb-2">
-                            CONFIGURE PRESENTATION PARAMETERS FOR POSTERS 1 TO 4
+                            CONFIGURE PRESENTATION PARAMETERS FOR POSTERS
                           </h4>
 
                           <div className="flex flex-col gap-5">
